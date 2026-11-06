@@ -5,19 +5,14 @@ to do nothing — it runs unattended until your village genuinely has nothing le
 start, then waits for a builder to free up and gets back to work.
 
 Windows desktop app for **Clash of Clans on Google Play Games (PC)**. It plays the
-game the way a person does: screen capture, computer vision, and clicks. No memory
-reading, no packet manipulation, no modified client.
+game the way a person does: screen capture, computer vision, and humanized clicks.
+No memory reading, no packet manipulation, no modified client.
 
 **[Download the latest release](../../releases/latest)** — a single `RaidR.exe`
 with the OCR engine bundled in, so there is nothing to install. This repository holds
 the full source; see [Running from source](#running-from-source) to build it yourself.
 
-![RaidR running beside Clash of Clans: the Run page shows Maxer mode with "Run until
-maxed" enabled, and the Live Status panel reports IDLING with 0/6 builders free and both
-storages full](docs/raidr-screenshot.png)
-
-*RaidR idling on purpose: storages are capped and every builder is busy, so it holds
-position and rechecks instead of raiding for loot that would overflow.*
+💬 **Join our Discord Community:** [https://discord.gg/TWwc4W6eMq](https://discord.gg/TWwc4W6eMq)
 
 ---
 
@@ -55,16 +50,31 @@ that a capped storage banks nothing — the rate reflects real gains, not raid c
 **Live status.** Current state, free builders, laboratory, and storage levels at a
 glance, alongside the loot readout.
 
+**Multi-Account Rotation.** Seamlessly switch between multiple accounts, run automated
+farming cycles, claim star bonuses, and cycle to the next village automatically.
+
+**Frosted Glass UI & 13 Themes.** Sleek dark UI with full theme customization including
+Minimal Monochrome (clean black & white), Deep Midnight Navy, Cyberpunk Teal, Neon Toxic,
+and Solar Flare.
+
 Works at **any Town Hall level** — detection reads the game's own UI signals (builder
 chip, lab chip, storage indicators) rather than hardcoded per-TH values.
 
 Not automated yet: starting laboratory research and Pet House upgrades. RaidR
 tracks the lab and tells you when it's idle, but you start those two yourself.
 
-## Safety rails
+## Safety & Anti-Detection
 
-Automation that spends resources has to be careful, so RaidR:
+Automation that spends resources and interacts with the game has to be careful, so RaidR:
 
+- **Humanized Bézier Input & Jitter:** Mouse movements follow natural cubic Bézier paths
+  with randomized velocity curves, imperfect target offsets, and dynamic dwell times.
+- **Realistic Camera Pan & Tilt Physics:** Dragging and panning around bases features
+  natural acceleration, deceleration, and organic overshoot.
+- **Random Cloud Waits & Fatigue Delays:** Simulates realistic human reaction times,
+  variable matchmaking cloud delays, and periodic idle breathers.
+- **100% External Screen Capture:** Zero DLL injection, zero memory tampering, zero modified
+  APKs. It operates completely alongside Google Play Games PC.
 - Never confirms a purchase whose cost shows red (unaffordable → gem-spend risk).
 - Requires the screen to **name the building it picked** before any purchase click, so
   a mis-aimed click can't buy the wrong thing.
@@ -106,9 +116,6 @@ RaidR.exe --autostart --minutes 0 --walls --upgrades maxer
 `--minutes 0` means run until maxed. `--upgrades off|dry|maxer|rusher`.
 
 ## Army setup
-
-![Saved Recipes showing Army 1: 42 Valkyries, 11 Earthquake spells, and 1 Log Launcher, with
-Queen, King, Warden, and Royal Champion and their pets](docs/army-valkyrie.png)
 
 **42 Valkyries · 11 Earthquake spells · 1 Log Launcher**, plus your heroes and pets — 336/352
 housing and a full 11/11 spell bar.
