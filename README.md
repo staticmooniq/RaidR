@@ -14,6 +14,10 @@ the full source; see [Running from source](#running-from-source) to build it you
 
 💬 **Join our Discord Community:** [https://discord.gg/TWwc4W6eMq](https://discord.gg/TWwc4W6eMq)
 
+<p align="center">
+  <img src="docs/raidr_preview.png" alt="RaidR UI running alongside Clash of Clans" width="850"/>
+</p>
+
 ---
 
 ## What it does
