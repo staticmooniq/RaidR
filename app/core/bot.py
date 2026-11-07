@@ -2350,6 +2350,7 @@ every lookup of earthquake.png is answered with rage.png instead. Read live, so 
         self._spell_alias_installed = True
 
     def _get_strategy(self, method_id):
+        rage = getattr(self, '_rage_spell', False)
         self._install_spell_alias()
         cb = getattr(self, '_status_callback', None)
         eq = getattr(self, '_earthquake_method', EARTHQUAKE_METHOD_CURVE)
