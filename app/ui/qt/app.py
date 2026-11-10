@@ -8,7 +8,7 @@ from app.ui.qt.main_window import MainWindow
 from app.ui.qt.theme import apply_theme
 
 def _parse_autostart(argv):
-    '''``--autostart [--minutes N] [--walls] [--upgrades off|dry|maxer|rusher]`` →
+    '''``--autostart [--minutes N] [--walls] [--upgrades off|dry|maxer|rusher]`` ->
     (minutes, walls, upgrades) or None. ``--minutes 0`` = run until maxed (no limit).'''
     if '--autostart' not in argv:
         return None
@@ -39,6 +39,12 @@ def run_gui():
     apply_theme(app, saved_theme)
 
     window = MainWindow()
+    if '--simulate-update' in sys.argv:
+        from app.services.updater import UpdateCheckerThread
+        window._update_checker = UpdateCheckerThread(current_version='0.9.9', parent=window)
+        window._update_checker.updateAvailable.connect(window._on_update_available)
+        window._update_checker.upToDate.connect(window._on_up_to_date)
+        QTimer.singleShot(1000, window._update_checker.start)
     apply_app_icon(window)
     window.show()
     autostart = _parse_autostart(sys.argv[1:])
@@ -46,4 +52,3 @@ def run_gui():
         (minutes, walls, upgrades) = autostart
         QTimer.singleShot(3000, (lambda : window.autostart_run(minutes, walls, upgrades)))
     sys.exit(app.exec())
-
