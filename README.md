@@ -132,6 +132,15 @@ For standard benchmark testing:
 
 ---
 
+## Acknowledgments & Credits
+
+- Special thanks and attribution to [efebolukbasi/BasePilot](https://github.com/efebolukbasi/BasePilot) for the foundational inspiration, early concepts, and architectural patterns that inspired this project.
+- [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) for the optical character recognition engine.
+- [OpenCV](https://opencv.org/) for real-time computer vision primitives.
+- [PySide6](https://wiki.qt.io/Qt_for_Python) for modern Qt interface bindings.
+
+---
+
 ## License
 
 Distributed under the [MIT License](LICENSE).
