@@ -110,6 +110,8 @@ class ChangelogDialog(QDialog):
         <div style='font-family: sans-serif; font-size: 12px; line-height: 1.6; color: {TOKENS.get('text', '#E2E8F0')};'>
             <h3 style='color: {TOKENS.get('primary', '#E11D48')}; margin-bottom: 4px;'>Version 1.1 (Current)</h3>
             <ul>
+                <li><b>Deployment Bar Recheck & Verification:</b> Automatic verification pass after deploying troops and heroes; re-scans the bar to immediately catch and deploy any leftover troops, heroes, siege machines, or spells.</li>
+                <li><b>Builder Base Multi-Camp & Hero Deployment:</b> Deploys all Builder Base army camps individually and guarantees Battle Machine/Flying Machine deployment with multi-threshold fallback.</li>
                 <li><b>In-Built Game Launcher:</b> One-click launch button in the navbar and controls to launch Clash of Clans via Google Play Games PC.</li>
                 <li><b>Strict Background Input Isolation:</b> Zero interference with YouTube or other apps; eliminated mouse cursor movement and global scroll events.</li>
                 <li><b>Text-Only Wall Action Templates:</b> Replaced level-dependent wall templates with clean text-only crops for 'Upgrade More', 'Add Wall', and 'Remove Wall' to guarantee 100% accuracy across all wall levels.</li>

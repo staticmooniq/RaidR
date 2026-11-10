@@ -5,6 +5,8 @@ All notable changes to the RaidR project are documented in this file.
 ## [1.1] - 2026-11-10
 
 ### Added
+- **Post-Deployment Verification & Recheck Sweep:** The bot now actively re-scans the bottom deployment bar after deploying armies. If any troops, heroes, siege machines, or spells were missed (due to tap lag, frame drops, or red forbidden drop boundaries), the bot selects and deploys them immediately.
+- **Builder Base Multi-Camp & Hero Deployment:** Builder Base attacks now explicitly cycle through each Army Camp slot individually and verify Battle/Flying Machine deployment with multi-threshold fallback, preventing missed camp troops.
 - **In-Built Game Launcher:** Added a one-click "🎮 Launch Game" button to the top navigation bar and the Run page controls to launch Clash of Clans directly via Google Play Games PC.
 - **Strict Background Window Input Isolation:** Hardened input dispatch to strictly target the game window surface (`hwnd`). Completely eliminated cursor movement (`SetCursorPos`) and hardware wheel events (`mouse_event`) so browsing YouTube or working in other apps will never experience unwanted clicks, cursor jumps, or scrolls.
 - **No-Steal Window Restore:** Background capture restores minimized windows via `SW_SHOWNOACTIVATE` without stealing foreground focus from the user's active apps.

@@ -8,6 +8,7 @@ from typing import Any, List, Optional, Tuple
 from app.services.input import InputService
 from app.services.vision import VisionService
 from app.config import ASPECT_16_9, Config
+from app.utils.common import get_template_path
 from app.utils.logger import setup_logger
 from app.utils.profile_settings_store import EARTHQUAKE_METHOD_CURVE, EARTHQUAKE_METHOD_RANDOM
 logger = setup_logger('Strategies')
@@ -129,7 +130,8 @@ class AttackStrategy:
         if ix:
             deploy_point = self._get_hero_deploy_point(frame)
             self.input.click(ix, iy, pause = 0.2, rand = False)
-            self.input.click(pause = 0.2, *deploy_point)
+            self.input.click(deploy_point[0], deploy_point[1], pause = 0.15, rand = False)
+            self.input.click(deploy_point[0], deploy_point[1], pause = 0.2, rand = False)
         for hero in heroes:
             fresh, interrupted = self._reward_checkpoint()
             if fresh is not None:
@@ -139,10 +141,13 @@ class AttackStrategy:
                 deployed_heroes = self._relocate_abilities(deployed_heroes, frame)
             (bx, by) = self.vision.find_template(frame, f'''{hero}.png''', threshold = 0.7, region = roi)
             if not bx:
+                (bx, by) = self.vision.find_template(frame, f'''{hero}.png''', threshold = 0.63, region = roi)
+            if not bx:
                 continue
             deploy_point = self._get_hero_deploy_point(frame)
             self.input.click(bx, by, pause = 0.2, rand = False)
-            self.input.click(pause = 0.2, *deploy_point)
+            self.input.click(deploy_point[0], deploy_point[1], pause = 0.15, rand = False)
+            self.input.click(deploy_point[0], deploy_point[1], pause = 0.15, rand = False)
             # Remember the live, deployed appearance only for relocation after
             # a reward shifts the bar. Normal ability clicks retain main's slots.
             live = self.input.window_service.screenshot() if self.event_handler else frame
@@ -154,6 +159,11 @@ class AttackStrategy:
             # per hero) after it lands.
             ability_ready_at = time.time() + random.uniform(_HERO_ABILITY_DELAY_MIN, _HERO_ABILITY_DELAY_MAX)
             deployed_heroes.append((bx, by, tile, ability_ready_at))
+            # Refresh frame for next hero scan to prevent using displaced coordinates
+            fresh_scr = self.input.window_service.screenshot()
+            if fresh_scr is not None:
+                frame = fresh_scr
+                roi = self.vision.bottom_half_region(frame)
         while deployed_heroes:
             fresh, interrupted = self._reward_checkpoint()
             if interrupted:
@@ -608,6 +618,161 @@ slot nearest the top vertex is left empty (virtual troop at the apex).
                     time.sleep(delay)
         return None
 
+    def _find_troop_template(self, frame, template_name, is_custom=False, region=None):
+        """Find troop template on the deploy bar using multi-threshold fallback."""
+        if is_custom:
+            for thresh in (0.78, 0.70, 0.62):
+                tx, ty = self.vision.find_template(frame, template_name, threshold=thresh, region=region, scale_template=False)
+                if tx is not None:
+                    return tx, ty
+            for thresh in (0.75, 0.65):
+                tx, ty = self.vision.find_template(frame, template_name, threshold=thresh, region=region, scale_template=True)
+                if tx is not None:
+                    return tx, ty
+            return None, None
+        else:
+            tmpl_file = template_name if template_name.endswith('.png') else f"{template_name}.png"
+            try:
+                candidate = Path(str(tmpl_file))
+                if not (candidate.is_absolute() and candidate.is_file()):
+                    path = get_template_path(tmpl_file)
+                    if not path.is_file():
+                        return None, None
+            except Exception:
+                return None, None
+            for thresh in (0.70, 0.63):
+                tx, ty = self.vision.find_template(frame, tmpl_file, threshold=thresh, region=region)
+                if tx is not None:
+                    return tx, ty
+            return None, None
+
+    def _get_candidate_troop_templates(self):
+        """Collect all troop template filenames or custom images that this strategy could deploy."""
+        candidates = []
+        if hasattr(self, 'strategy_data') and isinstance(self.strategy_data, dict):
+            for t_conf in self.strategy_data.get('troops', []):
+                t_tmpl = t_conf.get('template', '')
+                if t_tmpl:
+                    candidates.append((t_tmpl, t_conf.get('is_custom_image', False)))
+        if hasattr(self, 'troop_name') and self.troop_name:
+            candidates.append((f"{self.troop_name}.png", False))
+        if self.__class__.__name__ == 'EdragStrategy':
+            candidates.append(('edrag.png', False))
+        sec = getattr(self, 'secondary_template', '')
+        if sec:
+            candidates.append((sec, False))
+        candidates.append(('goldendrag.png', False))
+        
+        # General troop templates fallback
+        for common in ('edrag.png', 'valkyrie.png', 'sneaky.png', 'superminion.png', 'babydragon.png', 'nightwitch.png'):
+            candidates.append((common, False))
+
+        seen = set()
+        deduped = []
+        for tmpl, is_cust in candidates:
+            if tmpl not in seen:
+                seen.add(tmpl)
+                deduped.append((tmpl, is_cust))
+        return deduped
+
+    def recheck_and_deploy_remaining(self, stop_event=None, max_passes=2):
+        """
+        Post-deployment verification sweep:
+        Re-scans the bottom deployment bar to ensure no troops, heroes, siege machines,
+        or spells were missed or left behind. If any unit is detected still on the bar,
+        it selects and deploys it immediately.
+        """
+        ev = stop_event or self.stop_event
+        logger.info("Starting deploy bar verification sweep for leftover units...")
+
+        for pass_idx in range(1, max_passes + 1):
+            if ev and ev.is_set():
+                return
+            frame = self.input.window_service.screenshot()
+            if frame is None:
+                return
+            self._sync_frame_size(frame)
+            roi = self.vision.bottom_half_region(frame)
+
+            found_any = False
+
+            # 1. Recheck Siege Machines
+            sieges = ['loglauncher.png', 'siegebarracks.png']
+            for siege in sieges:
+                if ev and ev.is_set():
+                    return
+                sx, sy = self._find_troop_template(frame, siege, is_custom=False, region=roi)
+                if sx is not None:
+                    found_any = True
+                    logger.info("Deploy bar recheck (pass %d): un-deployed siege '%s' found at (%d, %d)", pass_idx, siege, sx, sy)
+                    self.input.click(sx, sy, pause=0.2, rand=False)
+                    dp = self._get_hero_deploy_point(frame)
+                    self.input.click(dp[0], dp[1], pause=0.15, rand=False)
+                    self.input.click(dp[0], dp[1], pause=0.2, rand=False)
+                    fresh = self.input.window_service.screenshot()
+                    if fresh is not None:
+                        frame = fresh
+                        roi = self.vision.bottom_half_region(frame)
+
+            # 2. Recheck Heroes
+            heroes = ['queen', 'warden', 'RC', 'king', 'prince', 'dragonduke']
+            for hero in heroes:
+                if ev and ev.is_set():
+                    return
+                hx, hy = self._find_troop_template(frame, f'{hero}.png', is_custom=False, region=roi)
+                if hx is not None:
+                    found_any = True
+                    logger.info("Deploy bar recheck (pass %d): un-deployed hero '%s' found at (%d, %d) — deploying!", pass_idx, hero, hx, hy)
+                    self.input.click(hx, hy, pause=0.2, rand=False)
+                    dp = self._get_hero_deploy_point(frame)
+                    self.input.click(dp[0], dp[1], pause=0.15, rand=False)
+                    self.input.click(dp[0], dp[1], pause=0.2, rand=False)
+                    fresh = self.input.window_service.screenshot()
+                    if fresh is not None:
+                        frame = fresh
+                        roi = self.vision.bottom_half_region(frame)
+
+            # 3. Recheck Strategy Troops
+            troop_candidates = self._get_candidate_troop_templates()
+            for tmpl, is_cust in troop_candidates:
+                if ev and ev.is_set():
+                    return
+                tx, ty = self._find_troop_template(frame, tmpl, is_custom=is_cust, region=roi)
+                if tx is not None:
+                    found_any = True
+                    logger.info("Deploy bar recheck (pass %d): remaining troop '%s' found at (%d, %d) — deploying!", pass_idx, tmpl, tx, ty)
+                    self.input.click(tx, ty, pause=0.2, rand=False)
+                    # Rapid perimeter taps to deploy remaining stack
+                    for _ in range(20):
+                        if ev and ev.is_set():
+                            return
+                        px, py = self._random_four_edge_point(frame)
+                        self.input.click(px, py, pause=0.08, rand=False)
+                    fresh = self.input.window_service.screenshot()
+                    if fresh is not None:
+                        frame = fresh
+                        roi = self.vision.bottom_half_region(frame)
+
+            # 4. Recheck Spells
+            for sp in ('rage.png', 'earthquake.png'):
+                if ev and ev.is_set():
+                    return
+                sx, sy = self._find_troop_template(frame, sp, is_custom=False, region=roi)
+                if sx is not None:
+                    found_any = True
+                    logger.info("Deploy bar recheck (pass %d): un-deployed spell '%s' found at (%d, %d)", pass_idx, sp, sx, sy)
+                    self.input.click(sx, sy, pause=0.2, rand=False)
+                    (fh, fw) = frame.shape[:2]
+                    self.input.click(fw // 2, int(fh * 0.45), pause=0.2, rand=False)
+                    fresh = self.input.window_service.screenshot()
+                    if fresh is not None:
+                        frame = fresh
+                        roi = self.vision.bottom_half_region(frame)
+
+            if not found_any:
+                logger.info("Deploy bar recheck: all units verified deployed on pass %d.", pass_idx)
+                break
+
 
 
 class TroopSpamStrategy(AttackStrategy):
@@ -688,6 +853,7 @@ class TroopSpamStrategy(AttackStrategy):
                 if frame is not None:
                     self._sync_frame_size(frame)
                     self.deploy_spells(frame)
+            self.recheck_and_deploy_remaining(ev)
             return True
 
         # Original drag deploy (runs when deploy_zones.json doesn't exist).
@@ -757,6 +923,7 @@ class TroopSpamStrategy(AttackStrategy):
                 if not frame is None:
                     self._sync_frame_size(frame)
                     self.deploy_spells(frame)
+            self.recheck_and_deploy_remaining(ev)
             return True
         finally:
             self.input.mouse_up(curr_x, curr_y)
@@ -805,6 +972,7 @@ class EdragStrategy(AttackStrategy):
             if not frame is None:
                 self._sync_frame_size(frame)
                 self.deploy_spells(frame)
+        self.recheck_and_deploy_remaining(ev)
         return True
 
 
@@ -995,4 +1163,5 @@ class CustomArmyStrategy(AttackStrategy):
                 self._sync_frame_size(frame)
                 self.deploy_spells(frame)
 
+        self.recheck_and_deploy_remaining(ev)
         return True

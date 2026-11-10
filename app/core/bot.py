@@ -1328,23 +1328,53 @@ exact frame the bot saw, so you can compare it to what the template was cut from
             logger.warning('Template miss snapshot failed: %s', e)
 
     def _deploy_bb_baby_dragons(self, frame):
-        '''Find all Baby Dragon icons, deploy on diamond edges, wait, then re-click saved icons.'''
+        """Find all Baby Dragon icons, deploy on diamond edges, wait, then re-click saved icons."""
         self._is_deploying = True
         try:
             strategy = AttackStrategy(self.input, self.vision, self.config, self.stop_event)
             roi = VisionService.bottom_half_region(frame)
             _tmpl = getattr(self, '_bb_troop_template', 'babydragon.png')
-            centers = VisionService.find_all_template_centers(frame, _tmpl, region = roi, max_matches = 12, suppress_pad_frac = _BB_TEMPLATE_SUPPRESS_PAD)
+            centers = VisionService.find_all_template_centers(frame, _tmpl, threshold = 0.70, region = roi, max_matches = 12, suppress_pad_frac = _BB_TEMPLATE_SUPPRESS_PAD)
+            if not centers:
+                centers = VisionService.find_all_template_centers(frame, _tmpl, threshold = 0.63, region = roi, max_matches = 12, suppress_pad_frac = _BB_TEMPLATE_SUPPRESS_PAD)
             if not centers:
                 return False
             deploy_count = len(centers)
-            self.input.click(centers[0][0], centers[0][1], pause = 0.3, rand = False)
-            if self.stop_event.wait(0.2):
-                return True
-            for px, py in strategy._even_diamond_top_perimeter_points(frame, deploy_count, reserve_top_corner_slot = True):
+            points = strategy._even_diamond_top_perimeter_points(frame, deploy_count, reserve_top_corner_slot = True)
+
+            # Select each camp slot individually and deploy its unit
+            for i in range(deploy_count):
                 self._check_stop()
+                cx, cy = centers[i]
+                self.input.click(cx, cy, pause = 0.2, rand = False)
+                if self.stop_event.wait(0.1):
+                    return True
+                if i < len(points):
+                    px, py = points[i]
+                else:
+                    px, py = strategy._random_diamond_perimeter_point(frame)
                 self.input.click(px, py, pause = _EDRAG_DELAY, rand = False)
+                self.input.click(px, py, pause = 0.1, rand = False)
+
             self._deploy_bb_battle_or_flying_machine(strategy)
+
+            # Builder Base Deploy Bar Recheck: deploy any leftover camps or missed heroes
+            bb_fresh = self.window.screenshot()
+            if bb_fresh is not None:
+                self._update_config_size(bb_fresh)
+                bb_roi = VisionService.bottom_half_region(bb_fresh)
+                for candidate_tmpl in (_tmpl, 'nightwitch.png'):
+                    rem_centers = VisionService.find_all_template_centers(bb_fresh, candidate_tmpl, threshold = 0.68, region = bb_roi, max_matches = 12, suppress_pad_frac = _BB_TEMPLATE_SUPPRESS_PAD)
+                    for rcx, rcy in rem_centers:
+                        self._check_stop()
+                        logger.info('Builder Base recheck: found un-deployed %s at (%d, %d) — deploying', candidate_tmpl, rcx, rcy)
+                        self.input.click(rcx, rcy, pause = 0.2, rand = False)
+                        rpx, rpy = strategy._random_diamond_perimeter_point(bb_fresh)
+                        self.input.click(rpx, rpy, pause = 0.15, rand = False)
+                        self.input.click(rpx, rpy, pause = 0.1, rand = False)
+                # Recheck hero
+                self._deploy_bb_battle_or_flying_machine(strategy)
+
             if self._loot_prioritise != 'elixir':
                 if self.stop_event.wait(_BB_BABY_DRAGON_RECLICK_WAIT):
                     return True
@@ -1356,24 +1386,28 @@ exact frame the bot saw, so you can compare it to what the template was cut from
             self._is_deploying = False
             self.reset_inactivity_timer()
 
-    
     def _deploy_bb_battle_or_flying_machine(self, strategy):
-        '''One bar lookup: Battle Machine, else Flying Machine; deploy on a random diamond edge.'''
+        """One bar lookup: Battle Machine, else Flying Machine; deploy on a random diamond edge."""
         frame = self.window.screenshot()
         if frame is None:
             return None
         self._update_config_size(frame)
         roi = VisionService.bottom_half_region(frame)
-        (tx, ty) = self.vision.find_template(frame, _BB_BATTLE_MACHINE_TEMPLATE, region = roi)
-        if not tx:
-            (tx, ty) = self.vision.find_template(frame, _BB_FLYING_MACHINE_TEMPLATE, region = roi)
+        tx, ty = None, None
+        for tmpl in (_BB_BATTLE_MACHINE_TEMPLATE, _BB_FLYING_MACHINE_TEMPLATE):
+            tx, ty = self.vision.find_template(frame, tmpl, threshold = 0.70, region = roi)
+            if not tx:
+                tx, ty = self.vision.find_template(frame, tmpl, threshold = 0.63, region = roi)
+            if tx:
+                break
         if not tx:
             logger.debug('Builder Base: %s / %s not found on troop bar', _BB_BATTLE_MACHINE_TEMPLATE, _BB_FLYING_MACHINE_TEMPLATE)
             return None
         (px, py) = strategy._random_diamond_perimeter_point(frame)
-        self.input.click(tx, ty, pause = 0.3, rand = False)
-        if self.stop_event.wait(0.2):
+        self.input.click(tx, ty, pause = 0.25, rand = False)
+        if self.stop_event.wait(0.15):
             return None
+        self.input.click(px, py, pause = 0.15, rand = False)
         self.input.click(px, py, pause = _EDRAG_DELAY, rand = False)
 
     
