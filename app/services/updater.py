@@ -161,6 +161,7 @@ class UpdateDownloadThread(QThread):
 def launch_self_update_and_restart(downloaded_file: str) -> bool:
     """
     Schedules an in-place executable replacement and restarts into the updated version.
+    Uses PowerShell in the background to avoid any console popups or pipe hangs.
     """
     try:
         if getattr(sys, 'frozen', False):
@@ -171,50 +172,64 @@ def launch_self_update_and_restart(downloaded_file: str) -> bool:
 
         pid = os.getpid()
         temp_dir = tempfile.gettempdir()
-        bat_path = os.path.join(temp_dir, f"raidr_update_{pid}.bat")
+        ps1_path = os.path.join(temp_dir, f"raidr_update_{pid}.ps1")
 
-        # The batch script waits until current PID exits, then overwrites target_exe and relaunches it.
-        script_content = f"""@echo off
-chcp 65001 > nul
-set PID={pid}
-set NEW_EXE="{downloaded_file}"
-set TARGET_EXE="{target_exe}"
+        # Escaped paths for PowerShell single quotes
+        ps_new = downloaded_file.replace("'", "''")
+        ps_target = target_exe.replace("'", "''")
 
-:wait_pid
-tasklist /fi "PID eq %PID%" 2>nul | find "%PID%" >nul
-if not errorlevel 1 (
-    timeout /t 1 /nobreak >nul
-    goto wait_pid
-)
+        script_content = f"""# RaidR in-place updater
+$targetPid = {pid}
+$newExe = '{ps_new}'
+$targetExe = '{ps_target}'
 
-timeout /t 1 /nobreak >nul
+# Wait for parent PID to exit (up to 20 seconds)
+$timeout = 0
+while ((Get-Process -Id $targetPid -ErrorAction SilentlyContinue) -and ($timeout -lt 40)) {{
+    Start-Sleep -Milliseconds 500
+    $timeout++
+}}
 
-copy /y %NEW_EXE% %TARGET_EXE% >nul 2>&1
-if errorlevel 1 (
-    move /y %NEW_EXE% %TARGET_EXE% >nul 2>&1
-) else (
-    del /f /q %NEW_EXE% >nul 2>&1
-)
+Start-Sleep -Milliseconds 800
 
-start "" %TARGET_EXE%
-del "%~f0" >nul 2>&1
+# Overwrite target executable
+try {{
+    Copy-Item -Path $newExe -Destination $targetExe -Force -ErrorAction Stop
+    Remove-Item -Path $newExe -Force -ErrorAction SilentlyContinue
+}} catch {{
+    Move-Item -Path $newExe -Destination $targetExe -Force -ErrorAction SilentlyContinue
+}}
+
+# Relaunch the updated app
+Start-Process -FilePath $targetExe -WorkingDirectory (Split-Path -Parent $targetExe)
+Remove-Item -Path $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
 """
 
-        with open(bat_path, 'w', encoding='utf-8') as f:
+        with open(ps1_path, 'w', encoding='utf-8') as f:
             f.write(script_content)
 
-        # Launch detached batch script
+        # Launch detached hidden PowerShell script
         DETACHED_PROCESS = 0x00000008
         CREATE_NO_WINDOW = 0x08000000
         flags = CREATE_NO_WINDOW | DETACHED_PROCESS
 
         subprocess.Popen(
-            ['cmd.exe', '/c', bat_path],
+            [
+                'powershell.exe',
+                '-NoProfile',
+                '-NonInteractive',
+                '-WindowStyle', 'Hidden',
+                '-ExecutionPolicy', 'Bypass',
+                '-File', ps1_path
+            ],
             creationflags=flags,
             close_fds=True
         )
 
+        # Cleanly quit Qt and exit immediately so process lock is freed
         QApplication.quit()
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(150, lambda: os._exit(0))
         return True
     except Exception as e:
         print(f"Failed to launch in-place updater: {e}")
