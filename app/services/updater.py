@@ -201,17 +201,17 @@ try {{
 }}
 
 # Relaunch the updated app
-Start-Process -FilePath $targetExe -WorkingDirectory (Split-Path -Parent $targetExe)
+Start-Process -FilePath $targetExe -WorkingDirectory (Split-Path -Parent $targetExe) -WindowStyle Normal
 Remove-Item -Path $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
 """
 
         with open(ps1_path, 'w', encoding='utf-8') as f:
             f.write(script_content)
 
-        # Launch detached hidden PowerShell script
-        DETACHED_PROCESS = 0x00000008
+        # Launch detached hidden PowerShell script with independent process group
         CREATE_NO_WINDOW = 0x08000000
-        flags = CREATE_NO_WINDOW | DETACHED_PROCESS
+        CREATE_NEW_PROCESS_GROUP = 0x00000200
+        flags = CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP
 
         subprocess.Popen(
             [
@@ -226,10 +226,8 @@ Remove-Item -Path $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyConti
             close_fds=True
         )
 
-        # Cleanly quit Qt and exit immediately so process lock is freed
-        QApplication.quit()
-        from PySide6.QtCore import QTimer
-        QTimer.singleShot(150, lambda: os._exit(0))
+        # Force immediate exit so executable file locks are instantly released
+        os._exit(0)
         return True
     except Exception as e:
         print(f"Failed to launch in-place updater: {e}")
