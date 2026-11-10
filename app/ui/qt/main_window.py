@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QGraphicsOpacityEffect
 )
 from app import __version__
+from app.services.updater import UpdateCheckerThread, UpdateInfo
 from app.ui.qt.branding import apply_app_icon, logo_pixmap
 from app.ui.qt.bot_controller import BotController
 from app.ui.qt.dialogs import show_error
@@ -19,6 +20,7 @@ from app.ui.qt.pages.settings import SettingsPage
 from app.ui.qt.taskbar_thumb_qt import QtTaskbarThumb
 from app.ui.qt.theme import TOKENS, WINDOW_DEFAULT, WINDOW_MIN, NAV_HEIGHT
 from app.ui.qt.touch_overlay import TouchOverlay
+from app.ui.qt.update_dialog import UpdateBannerWidget
 
 PAGE_KEYS = [
     'run',
@@ -103,6 +105,28 @@ class MainWindow(QMainWindow):
 
         nav_layout.addStretch()
 
+        # Update Available Button in NavBar (hidden until update detected)
+        self._nav_update_btn = QPushButton("Update Available ✨")
+        self._nav_update_btn.setProperty("role", "nav_tab")
+        self._nav_update_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._nav_update_btn.setVisible(False)
+        self._nav_update_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {TOKENS.get('primary', '#E11D48')};
+                color: {TOKENS.get('on_primary', '#FFFFFF')};
+                border: 1px solid rgba(255, 255, 255, 0.35);
+                border-radius: 9px;
+                padding: 6px 14px;
+                font-size: 12px;
+                font-weight: 700;
+            }}
+            QPushButton:hover {{
+                filter: brightness(1.15);
+            }}
+        """)
+        self._nav_update_btn.clicked.connect(lambda: self._update_banner._open_update_dialog())
+        nav_layout.addWidget(self._nav_update_btn)
+
         # Join Discord Button
         self._discord_btn = QPushButton("Join Discord")
         self._discord_btn.setProperty("role", "nav_tab")
@@ -133,6 +157,10 @@ class MainWindow(QMainWindow):
 
         root.addWidget(navbar)
 
+        # Update Banner placed right below navbar
+        self._update_banner = UpdateBannerWidget(parent=self)
+        root.addWidget(self._update_banner)
+
         # Stacked Pages
         self._stack = QStackedWidget()
         self._run_page = RunPage(self._controller, self.navigate_to)
@@ -151,6 +179,23 @@ class MainWindow(QMainWindow):
 
         self._nav_group.idClicked.connect(self._on_tab_changed)
         self._restore_geometry()
+
+        # Background update checker (checks GitHub releases 1.5s after launch)
+        self._update_checker = UpdateCheckerThread(current_version=__version__, parent=self)
+        self._update_checker.updateAvailable.connect(self._on_update_available)
+        self._update_checker.upToDate.connect(self._on_up_to_date)
+        QTimer.singleShot(1500, self._update_checker.start)
+
+    def _on_update_available(self, info: UpdateInfo):
+        self._update_banner.set_update_info(info)
+        self._nav_update_btn.setText(f"Update to v{info.version} ✨")
+        self._nav_update_btn.setVisible(True)
+        if hasattr(self, '_settings_page'):
+            self._settings_page.notify_update_available(info)
+
+    def _on_up_to_date(self, current_ver: str):
+        if hasattr(self, '_settings_page'):
+            self._settings_page.notify_up_to_date(current_ver)
 
     def _on_tab_changed(self, index: int):
         if hasattr(self, '_village_selector'):

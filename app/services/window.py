@@ -105,7 +105,7 @@ auto-detection (Google Play Games window with a ``CROSVM*`` child surface).
             if self.hwnd:
                 logger.info(f'''Window found via auto-detect fallback (HWND: {self.hwnd})''')
                 return True
-        logger.warning(f'''Window not found: {self.window_name} (expect a titled window with a {_CHILD_CLASS_PREFIX!r}* surface, either as the top-level window itself or a descendant — Google Play Games). Open Settings → Game window to pick it manually.''')
+        logger.warning(f'''Window not found: {self.window_name} (expect a titled window with a {_CHILD_CLASS_PREFIX!r}* surface, either as the top-level window itself or a descendant - Google Play Games). Open Settings -> Game window to pick it manually.''')
         return False
 
     

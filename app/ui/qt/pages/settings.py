@@ -7,10 +7,13 @@ from PySide6.QtWidgets import (
     QApplication, QComboBox, QDialog, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget,
     QListWidgetItem, QMainWindow, QScrollArea, QSpinBox, QVBoxLayout, QWidget
 )
+from app import __version__
 from app.config import resolve_aspect_key
 from app.services.display import DisplayService
+from app.services.updater import UpdateCheckerThread, UpdateInfo
 from app.services.window import DescendantInfo, WindowCandidate, WindowService
 from app.ui.qt.theme import SPACING, TOKENS, THEME_TEMPLATES, apply_theme
+from app.ui.qt.update_dialog import UpdateDialog
 from app.ui.qt.widgets import Card, PageTitle, SectionTitle, ToggleSwitch, chip_button, danger_button, neutral_button, primary_button
 from app.utils.logger import setup_logger
 from app.utils.player_list_store import PlayerEntry, load_players, save_players
@@ -89,6 +92,7 @@ class SettingsPage(QWidget):
         layout.addWidget(self._build_earthquake_card())
         layout.addWidget(self._build_loot_filter_card())
         layout.addWidget(self._build_window_card())
+        layout.addWidget(self._build_updates_card())
         layout.addStretch()
         scroll.setWidget(content)
         outer.addWidget(scroll)
@@ -625,3 +629,79 @@ class SettingsPage(QWidget):
         win = self.window()
         if isinstance(win, QMainWindow) and win.statusBar() is not None:
             win.statusBar().showMessage(msg, 1500)
+
+    def _build_updates_card(self):
+        card = Card()
+        card.card_layout.addWidget(SectionTitle('Software Updates'))
+        
+        row = QHBoxLayout()
+        row.setSpacing(SPACING['md'])
+
+        vbox = QVBoxLayout()
+        vbox.setSpacing(2)
+        lbl_cur = QLabel(f"Installed Version: v{__version__}")
+        lbl_cur.setStyleSheet(f"color: {TOKENS['text']}; font-weight: 700; font-size: 13px;")
+        self._update_status_lbl = QLabel("Up to date")
+        self._update_status_lbl.setStyleSheet(f"color: {TOKENS['text_muted']}; font-size: 12px;")
+        vbox.addWidget(lbl_cur)
+        vbox.addWidget(self._update_status_lbl)
+        row.addLayout(vbox, stretch=1)
+
+        self._pending_update_info: Optional[UpdateInfo] = None
+
+        self._btn_check_updates = chip_button('Check for Updates', parent=self)
+        self._btn_check_updates.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_check_updates.clicked.connect(self._manual_check_updates)
+        row.addWidget(self._btn_check_updates)
+
+        self._btn_install_update = primary_button('Install Update', parent=self)
+        self._btn_install_update.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_install_update.setVisible(False)
+        self._btn_install_update.clicked.connect(self._open_update_dialog)
+        row.addWidget(self._btn_install_update)
+
+        card.card_layout.addLayout(row)
+        return card
+
+    def _manual_check_updates(self):
+        self._btn_check_updates.setEnabled(False)
+        self._update_status_lbl.setText('Checking GitHub releases...')
+        self._update_status_lbl.setStyleSheet(f"color: {TOKENS['text_muted']}; font-size: 12px;")
+
+        self._manual_checker = UpdateCheckerThread(current_version=__version__, parent=self)
+        self._manual_checker.updateAvailable.connect(self._on_manual_update_found)
+        self._manual_checker.upToDate.connect(self._on_manual_up_to_date)
+        self._manual_checker.checkFailed.connect(self._on_manual_check_failed)
+        self._manual_checker.start()
+
+    def _on_manual_update_found(self, info: UpdateInfo):
+        self._btn_check_updates.setEnabled(True)
+        self.notify_update_available(info)
+        self._open_update_dialog()
+
+    def _on_manual_up_to_date(self, current_ver: str):
+        self._btn_check_updates.setEnabled(True)
+        self.notify_up_to_date(current_ver)
+        self._flash_status_bar('RaidR is already up to date')
+
+    def _on_manual_check_failed(self, err_msg: str):
+        self._btn_check_updates.setEnabled(True)
+        self._update_status_lbl.setText(f'Check failed: {err_msg[:30]}')
+        self._update_status_lbl.setStyleSheet(f"color: {TOKENS['danger']}; font-size: 12px;")
+
+    def notify_update_available(self, info: UpdateInfo):
+        self._pending_update_info = info
+        self._update_status_lbl.setText(f"Update available: RaidR v{info.version} ✨")
+        self._update_status_lbl.setStyleSheet(f"color: {TOKENS['primary']}; font-size: 12px; font-weight: bold;")
+        self._btn_install_update.setVisible(True)
+
+    def notify_up_to_date(self, current_ver: str):
+        self._update_status_lbl.setText("You are running the latest version.")
+        self._update_status_lbl.setStyleSheet(f"color: {TOKENS['text_muted']}; font-size: 12px;")
+        self._btn_install_update.setVisible(False)
+
+    def _open_update_dialog(self):
+        if not self._pending_update_info:
+            return
+        dlg = UpdateDialog(self._pending_update_info, parent=self.window())
+        dlg.exec()
