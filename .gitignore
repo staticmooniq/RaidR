@@ -30,3 +30,6 @@ debug/
 !assets/*.png
 !assets/**/*.png
 !templates/**/*.png
+
+test_*.py
+test_*.bat

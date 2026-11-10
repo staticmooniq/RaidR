@@ -2343,7 +2343,7 @@ every lookup of earthquake.png is answered with rage.png instead. Read live, so 
                     template_name = 'rage.png'
                 elif not getattr(bot, '_rage_missing_warned', False):
                     bot._rage_missing_warned = True
-                    logger.warning('Rage Spell is ON but templates/<aspect>/rage.png does not exist - using earthquake.png. Run: python make_template.py rage.png')
+                    logger.warning('Rage Spell is ON but templates/<aspect>/rage.png does not exist - using earthquake.png. Run: python tools/make_template.py rage.png')
             return orig(frame, template_name, *args, **kwargs)
 
         self.vision.find_template = aliased
