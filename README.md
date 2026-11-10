@@ -81,8 +81,8 @@ Developed as a case study in **black-box UI testing and visual telemetry** again
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/vrx7alt/BasePilot.git
-   cd BasePilot
+   git clone https://github.com/staticmooniq/RaidR.git
+   cd RaidR
    ```
 2. Install Python dependencies:
    ```bash
