@@ -475,11 +475,12 @@ QPushButton[role="primary"] {{
 QPushButton[role="primary"]:hover {{
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
         stop:0 #FFFFFF, stop:0.07 {t['grad_top']}, stop:0.48 {t['primary_hov']}, stop:1 {t['grad_mid']});
+    color: {t['on_primary']};
     border: 1px solid #FFFFFF;
 }}
 QPushButton[role="primary"]:pressed {{
     background: {t['primary_pressed']};
-    color: #000000;
+    color: {t['on_primary']};
     border: 1px solid {t['primary_pressed']};
 }}
 QPushButton[role="primary"]:disabled {{

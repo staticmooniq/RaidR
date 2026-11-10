@@ -22,6 +22,7 @@ from app.utils.common import ensure_dir, get_resource_path
 from app.utils.custom_strategy_store import (
     STRATEGY_DEPLOY_PRESETS, get_custom_troops_dir
 )
+from app.ui.qt.game_cropper import GameCropWindow
 
 
 class TroopRowWidget(QWidget):
@@ -34,15 +35,15 @@ class TroopRowWidget(QWidget):
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(4, 6, 4, 6)
-        layout.setSpacing(14)
+        layout.setSpacing(12)
 
         # Image preview
         self._preview = QLabel()
         self._preview.setFixedSize(50, 50)
         self._preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._preview.setStyleSheet(f"""
-            background: {TOKENS['sidebar']};
-            border: 1px solid {TOKENS['border_hi']};
+            background: {TOKENS.get('surface_hi', 'rgba(26, 32, 45, 0.82)')};
+            border: 1px solid {TOKENS.get('border_hi', '#3E4D66')};
             border-radius: 8px;
         """)
         layout.addWidget(self._preview)
@@ -51,34 +52,55 @@ class TroopRowWidget(QWidget):
         vbox_name = QVBoxLayout()
         vbox_name.setSpacing(4)
         lbl_name = QLabel('TROOP NAME')
-        lbl_name.setStyleSheet(f"font-size: 10px; font-weight: 700; color: {TOKENS['text_muted']};")
+        lbl_name.setStyleSheet(f"font-size: 10px; font-weight: 700; color: {TOKENS.get('text_muted', '#8FA0B8')};")
         self._name_input = QLineEdit(self.troop_data.get('name', 'Troop'))
-        self._name_input.setFixedWidth(140)
+        self._name_input.setFixedWidth(130)
         self._name_input.setFixedHeight(34)
         vbox_name.addWidget(lbl_name)
         vbox_name.addWidget(self._name_input)
         layout.addLayout(vbox_name)
 
-        # Upload / Paste buttons
+        # Snip from Game / Upload / Paste buttons
         vbox_btns = QVBoxLayout()
         vbox_btns.setSpacing(4)
-        btn_upload = chip_button('Upload Crop', parent=self)
-        btn_upload.setFixedWidth(95)
-        btn_upload.setFixedHeight(26)
+
+        lbl_icon = QLabel('TROOP ICON')
+        lbl_icon.setStyleSheet(f"font-size: 10px; font-weight: 700; color: {TOKENS.get('text_muted', '#8FA0B8')};")
+        vbox_btns.addWidget(lbl_icon)
+
+        btn_snip = primary_button('Snip from Game', parent=self)
+        btn_snip.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_snip.setFixedWidth(138)
+        btn_snip.setFixedHeight(30)
+        btn_snip.clicked.connect(self._snip_from_game)
+        btn_snip.setToolTip('Grabs real-time Clash of Clans screen so you can crop with perfect pixel accuracy.')
+
+        btn_row_extra = QHBoxLayout()
+        btn_row_extra.setSpacing(6)
+        btn_upload = chip_button('Upload', parent=self)
+        btn_upload.setFixedWidth(66)
+        btn_upload.setFixedHeight(22)
+        btn_upload.setStyleSheet("padding: 2px 4px; font-size: 11px;")
         btn_upload.clicked.connect(self._select_image)
+
         btn_paste = chip_button('Paste', parent=self)
-        btn_paste.setFixedWidth(95)
-        btn_paste.setFixedHeight(26)
+        btn_paste.setFixedWidth(66)
+        btn_paste.setFixedHeight(22)
+        btn_paste.setStyleSheet("padding: 2px 4px; font-size: 11px;")
         btn_paste.clicked.connect(self._paste_image)
-        vbox_btns.addWidget(btn_upload)
-        vbox_btns.addWidget(btn_paste)
+
+        btn_row_extra.addWidget(btn_upload)
+        btn_row_extra.addWidget(btn_paste)
+
+        vbox_btns.addWidget(btn_snip)
+        vbox_btns.addLayout(btn_row_extra)
         layout.addLayout(vbox_btns)
 
         # Deploy Pattern / Strategy selector
         vbox_style = QVBoxLayout()
         vbox_style.setSpacing(4)
         lbl_style = QLabel('DEPLOY STYLE')
-        lbl_style.setStyleSheet(f"font-size: 10px; font-weight: 700; color: {TOKENS['text_muted']};")
+        lbl_style.setStyleSheet(f"font-size: 10px; font-weight: 700; color: {TOKENS.get('text_muted', '#8FA0B8')};")
         self._style_combo = QComboBox()
         self._style_combo.setFixedHeight(34)
         for label, val in STRATEGY_DEPLOY_PRESETS:
@@ -95,7 +117,7 @@ class TroopRowWidget(QWidget):
         vbox_count = QVBoxLayout()
         vbox_count.setSpacing(4)
         lbl_count = QLabel('COUNT (0=ALL)')
-        lbl_count.setStyleSheet(f"font-size: 10px; font-weight: 700; color: {TOKENS['text_muted']};")
+        lbl_count.setStyleSheet(f"font-size: 10px; font-weight: 700; color: {TOKENS.get('text_muted', '#8FA0B8')};")
         self._count_spin = QSpinBox()
         self._count_spin.setRange(0, 150)
         self._count_spin.setValue(int(self.troop_data.get('count', 0)))
@@ -106,7 +128,7 @@ class TroopRowWidget(QWidget):
         layout.addLayout(vbox_count)
 
         # Delete button: sleek modern danger button
-        self._del_btn = QPushButton(parent=self)
+        self._del_btn = danger_button('', parent=self)
         self._del_btn.setFixedSize(32, 32)
         self._del_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._del_btn.setToolTip('Remove this troop')
@@ -116,26 +138,6 @@ class TroopRowWidget(QWidget):
             self._del_btn.setIconSize(QSize(16, 16))
         else:
             self._del_btn.setText('✕')
-        self._del_btn.setStyleSheet("""
-            QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #FF5252, stop:0.5 #E02828, stop:1 #B71C1C);
-                border: 1px solid #FF8080;
-                border-radius: 8px;
-                color: #FFFFFF;
-                font-size: 13px;
-                font-weight: 800;
-            }
-            QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #FF6E6E, stop:0.5 #F03838, stop:1 #D32F2F);
-                border-color: #FFFFFF;
-            }
-            QPushButton:pressed {
-                background: #8B0000;
-                border-color: #AA0000;
-            }
-        """)
         self._del_btn.clicked.connect(self._delete_clicked)
         layout.addWidget(self._del_btn)
 
@@ -193,6 +195,11 @@ class TroopRowWidget(QWidget):
         self.troop_data['is_custom_image'] = True
         self._refresh_preview()
 
+    def _snip_from_game(self):
+        cropper = GameCropWindow(parent=self.window())
+        if cropper.exec() == QDialog.DialogCode.Accepted and cropper.cropped_image:
+            self._save_image_data(cropper.cropped_image)
+
     def _select_image(self):
         filename, _ = QFileDialog.getOpenFileName(
             self, 'Select Troop Deploy Bar Icon Crop', '',
@@ -221,8 +228,16 @@ class StrategyEditorDialog(QDialog):
     def __init__(self, strategy_data: Optional[Dict[str, Any]] = None, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Strategy Designer — RaidR')
-        self.resize(760, 580)
-        self.setMinimumSize(700, 500)
+        self.resize(800, 600)
+        self.setMinimumSize(740, 520)
+        
+        # Apply dark background container styling to the dialog itself
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {TOKENS.get('bg_c1', '#11151C')};
+                color: {TOKENS.get('text', '#FFFFFF')};
+            }}
+        """)
 
         # Clone or create initial structure
         if strategy_data:
@@ -230,73 +245,82 @@ class StrategyEditorDialog(QDialog):
             self._data['troops'] = [dict(t) for t in strategy_data.get('troops', [])]
         else:
             self._data = {
-                'id': f"custom_{uuid.uuid4().hex[:6]}",
-                'name': 'My Custom Army',
-                'builtin': False,
-                'description': 'Custom user multi-troop attack configuration.',
+                'id': f"strat_{uuid.uuid4().hex[:8]}",
+                'name': 'New Strategy',
+                'deploy_heroes': True,
+                'deploy_spells': True,
                 'troops': [
                     {
-                        'name': 'Primary Troop',
+                        'name': 'Troop 1',
                         'template': '',
                         'is_custom_image': True,
-                        'deploy_style': 'diamond_perimeter',
+                        'deploy_style': 'four_edge_spam',
                         'count': 0,
                         'delay': 0.15,
                     }
-                ],
-                'deploy_heroes': True,
-                'deploy_spells': True,
+                ]
             }
 
-        self._troop_rows: List[TroopRowWidget] = []
-        self._build_ui()
-
-    def _build_ui(self):
         root = QVBoxLayout(self)
         root.setContentsMargins(SPACING['lg'], SPACING['lg'], SPACING['lg'], SPACING['lg'])
         root.setSpacing(SPACING['md'])
 
-        # Top Name & Settings
-        lbl_head = SectionTitle('Strategy Details')
-        root.addWidget(lbl_head)
-        
-        row_name = QHBoxLayout()
-        lbl = QLabel('STRATEGY NAME:')
-        lbl.setStyleSheet(f"font-size: 11px; font-weight: 700; color: {TOKENS['text_muted']};")
-        row_name.addWidget(lbl)
-        self._name_field = QLineEdit(self._data.get('name', 'Custom Army'))
+        # Top Card: Strategy Details
+        card_info = Card()
+        info_layout = card_info.card_layout
+        info_layout.setSpacing(12)
+
+        lbl_section = SectionTitle('STRATEGY CONFIGURATION', parent=card_info)
+        info_layout.addWidget(lbl_section)
+
+        row_meta = QHBoxLayout()
+        row_meta.setSpacing(SPACING['md'])
+
+        lbl_name = QLabel('Strategy Name:', parent=card_info)
+        lbl_name.setStyleSheet(f"font-weight: 700; color: {TOKENS['text']}; font-size: 13px;")
+        self._name_field = QLineEdit(self._data.get('name', 'My Strategy'), parent=card_info)
         self._name_field.setFixedHeight(34)
-        self._name_field.setStyleSheet(f"font-size: 13px; font-weight: 700; color: {TOKENS['primary']};")
-        row_name.addWidget(self._name_field, stretch=1)
-        root.addLayout(row_name)
+        row_meta.addWidget(lbl_name)
+        row_meta.addWidget(self._name_field, stretch=1)
 
-        toggles_row = QHBoxLayout()
-        toggles_row.setSpacing(28)
-        self._toggle_heroes = ToggleSwitch('Deploy Heroes & Sieges')
+        # Toggles
+        self._toggle_heroes = ToggleSwitch(parent=card_info)
         self._toggle_heroes.setChecked(self._data.get('deploy_heroes', True))
-        toggles_row.addWidget(self._toggle_heroes)
+        lbl_h = QLabel('Deploy Heroes', parent=card_info)
+        lbl_h.setStyleSheet(f"color: {TOKENS['text']}; font-size: 12px; font-weight: 600;")
+        row_meta.addWidget(self._toggle_heroes)
+        row_meta.addWidget(lbl_h)
 
-        self._toggle_spells = ToggleSwitch('Deploy Spells')
+        row_meta.addSpacing(10)
+
+        self._toggle_spells = ToggleSwitch(parent=card_info)
         self._toggle_spells.setChecked(self._data.get('deploy_spells', True))
-        toggles_row.addWidget(self._toggle_spells)
-        toggles_row.addStretch()
-        root.addLayout(toggles_row)
+        lbl_s = QLabel('Deploy Spells', parent=card_info)
+        lbl_s.setStyleSheet(f"color: {TOKENS['text']}; font-size: 12px; font-weight: 600;")
+        row_meta.addWidget(self._toggle_spells)
+        row_meta.addWidget(lbl_s)
 
-        # Middle: Troops List inside Scroll Area
-        lbl_troops = SectionTitle('Army Troops & Deploy Order')
-        root.addWidget(lbl_troops)
+        info_layout.addLayout(row_meta)
+        root.addWidget(card_info)
 
+        # Troop List Section
+        lbl_troops_sec = SectionTitle('TROOP DEPLOYMENT SEQUENCE (EXECUTED TOP TO BOTTOM)', parent=self)
+        root.addWidget(lbl_troops_sec)
+
+        # Scroll Area for Troops
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.viewport().setAutoFillBackground(False)
 
         self._troops_container = QWidget()
         self._troops_layout = QVBoxLayout(self._troops_container)
         self._troops_layout.setContentsMargins(0, 0, 0, 0)
-        self._troops_layout.setSpacing(SPACING['sm'])
+        self._troops_layout.setSpacing(8)
 
-        for t in self._data.get('troops', []):
-            self._add_troop_row(t)
+        self._troop_rows: List[TroopRowWidget] = []
+        for t_conf in self._data.get('troops', []):
+            self._add_troop_row(t_conf)
 
         self._troops_layout.addStretch()
         scroll.setWidget(self._troops_container)

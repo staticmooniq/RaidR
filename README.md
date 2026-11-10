@@ -1,187 +1,152 @@
 # RaidR
 
-**Autopilot for your Clash of Clans base.** RaidR farms, upgrades, and knows when
-to do nothing — it runs unattended until your village genuinely has nothing left to
-start, then waits for a builder to free up and gets back to work.
+### Computer Vision & OCR-Driven GUI Automation Research Suite
 
-Windows desktop app for **Clash of Clans on Google Play Games (PC)**. It plays the
-game the way a person does: screen capture, computer vision, and humanized clicks.
-No memory reading, no packet manipulation, no modified client.
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Platform: Windows](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-lightgrey.svg)](https://www.microsoft.com/windows)
+[![OpenCV](https://img.shields.io/badge/Computer%20Vision-OpenCV-green.svg)](https://opencv.org/)
+[![Tesseract OCR](https://img.shields.io/badge/OCR-Tesseract%205-orange.svg)](https://github.com/tesseract-ocr/tesseract)
 
-**[Download the latest release](../../releases/latest)** — a single `RaidR.exe`
-with the OCR engine bundled in, so there is nothing to install. This repository holds
-the full source; see [Running from source](#running-from-source) to build it yourself.
+**RaidR** is an educational open-source research testbed exploring real-time computer vision (OpenCV), optical character recognition (Tesseract OCR), and non-intrusive GUI automation patterns on Windows desktop environments.
 
-💬 **Join our Discord Community:** [https://discord.gg/TWwc4W6eMq](https://discord.gg/TWwc4W6eMq)
+Developed as a case study in **black-box UI testing and visual telemetry** against dynamic, adversarially animated graphical targets, RaidR demonstrates how an external system can perceive, analyze, and interact with complex interactive software through pure visual observation:
+- **Zero memory tampering:** No process memory reading or DLL injection.
+- **Zero packet manipulation:** No network hooking or protocol spoofing.
+- **Pure external observation:** Operates solely via screen capture, template matching, OCR heuristics, and standard OS accessibility input messages.
+
+💬 **Community Discussions:** [https://discord.gg/TWwc4W6eMq](https://discord.gg/TWwc4W6eMq)
 
 <p align="center">
-  <img src="docs/raidr_preview.png" alt="RaidR UI running alongside Clash of Clans" width="850"/>
+  <img src="docs/raidr_preview.png" alt="RaidR UI running alongside target window" width="850"/>
 </p>
 
 ---
 
-## What it does
+## Technical Architecture & Core Capabilities
 
-**Farming.** Finds matches, deploys your army (Valkyries, Sneaky Goblins, Super
-Minions, or Edrags), collects loot, returns home, and recovers on its own from popups,
-disconnects, and stray screens. Builder Base farming included. See
-[Army setup](#army-setup) for what to bring.
+### 1. Computer Vision Pipeline (OpenCV)
+- **Multi-Scale Normalized Cross-Correlation:** Uses `cv2.matchTemplate` with dynamic fallback thresholds (0.78 down to 0.62) to reliably identify user interface buttons, unit badges, and dialog elements across varying graphics configurations and resolutions.
+- **Adaptive Region-of-Interest (ROI) Masking:** Evaluates segmented frame regions (e.g., bottom deployment bar, upper resource HUD) to accelerate inference latency and avoid false-positive matches in animated background terrain.
+- **Integrated Real-Time Cropping Utility (`GameCropWindow`):** Built-in visual snip tool allowing users to extract high-precision pixel crops directly from the live application surface for custom entity registration.
 
-**Auto upgrade (beta).** Reads the builder menu with OCR and spends your loot:
+### 2. Optical Character Recognition & Telemetry (Tesseract 5)
+- **HUD Metric Extraction:** Digitizes real-time resource tallies, builder availability counters, and timers directly from screen buffers.
+- **Multi-Frame Consistency Verification:** Mandates agreement across successive capture frames with sanity-check bounds filtering, eliminating OCR jitter or transient visual artifacts.
+- **Building Menu Parsing:** Scans upgrade dialogs to parse building identifiers and upgrade costs before committing visual interactions.
 
-- **Maxer** — starts an affordable upgrade and never touches your Town Hall. Priciest
-  first by default, since a farmed account is builder-limited rather than loot-limited;
-  switch to cheapest first in *Settings → Upgrade order* to spread builders across more
-  jobs. Dark elixir upgrades (heroes) always get first claim either way.
-- **Rusher** — takes the Town Hall as soon as it's affordable.
-- **Dry run** — logs what it *would* start and clicks nothing. Good first setting.
+### 3. Human-Centric Input Kinematics
+- **Cubic Bézier Curve Trajectory Planning:** Simulates natural ergonomic mouse trajectories with non-linear velocity easing (`-(cos(pi * t) - 1) / 2`).
+- **Dynamic Dwell Times & Position Jitter:** Injects micro-variations into mouse dwell durations and target coordinates to model realistic human interaction patterns.
+- **Discrete Perimeter Tapping:** Uses coordinate quantization to distribute tap sequences evenly across application boundaries while respecting safe margins (`y >= 50` and `y <= 0.77 * height`).
 
-**Run until maxed.** No time limit. Farm → spend → and when storages are full with
-every builder busy, RaidR **idles** instead of raiding for loot that would
-overflow, rechecking every few minutes and resuming the moment something frees up.
-It only stops when you tell it to.
+### 4. Autonomous State Machine & Error Recovery
+- **Modal Dialogue Handling:** Automatically detects and resolves modal interruption dialogues, network disconnect notices, and confirm prompts.
+- **State Transition Safeguards:** Verifies state transitions (such as builder counter increments or screen transitions) before proceeding down execution trees.
+- **Visual Log Archiving:** Saves anomalous visual frames to `%LOCALAPPDATA%\RaidR\debug\` for inspection and model evaluation.
 
-**Wall upgrades.** Batch-buys walls when loot passes a threshold you set, elixir first,
-keeping enough gold for match entry fees.
+### 5. Strategy Designer & Custom Multi-Troop Sequencer
+- **Visual Strategy Editor:** Interactive Qt dialog to configure multi-unit sequences with custom deployment patterns:
+  - *Diamond Perimeter:* Uniform perimeter spread across top boundary lines.
+  - *Full Four-Edge Spam:* Balanced tap distribution spanning all four quadrants of the arena.
+  - *Custom Zone Clusters:* Matrix-based 5-point coordinate clusters mapped to resolution.
+  - *Corner Focus:* Focused regional deployment with localized dispersion.
 
-**Loot tracking.** Every raid's gold, elixir, and dark elixir gains are read straight
-off the HUD and accumulated into a session total plus a **loot-per-hour rate**, so you
-can see what an army or strategy is actually earning you instead of guessing. Readings
-require agreement across consecutive frames and are sanity-checked against what a
-single raid can plausibly yield, so a bad OCR frame can't inflate your numbers. (Note
-that a capped storage banks nothing — the rate reflects real gains, not raid count.)
+### 6. Modern PySide6 Desktop Interface
+- **Frosted Glass Styling:** Modern Qt6 interface with 13 built-in themes (including Minimal Monochrome, Crimson Sunset, Electric Blue, Deep Midnight Navy, Cyberpunk Teal, and Pure Pitch Black).
+- **Session Telemetry:** Real-time data readouts showing runtime, session statistics, rate-per-hour telemetry, and active worker indicators.
 
-**Live status.** Current state, free builders, laboratory, and storage levels at a
-glance, alongside the loot readout.
+---
 
-**Multi-Account Rotation.** Seamlessly switch between multiple accounts, run automated
-farming cycles, claim star bonuses, and cycle to the next village automatically.
+## System Requirements
 
-**Frosted Glass UI & 13 Themes.** Sleek dark UI with full theme customization including
-Minimal Monochrome (clean black & white), Deep Midnight Navy, Cyberpunk Teal, Neon Toxic,
-and Solar Flare.
+- **Operating System:** Windows 10 or Windows 11 (64-bit)
+- **Runtime Environment:** Google Play Games on PC (standard 16:9 / 16:10 isometric view)
+- **Display Aspect Ratio:** **16:9** (native 2560×1440 or scaled equivalent) or **16:10** (2560×1600)
+- **Display Scaling Note:** If using an ultrawide (21:9) monitor, set the display to 16:9 in *Settings → Switch display to 16:9*, restart the target application to lock aspect ratio, then restore your native resolution.
 
-Works at **any Town Hall level** — detection reads the game's own UI signals (builder
-chip, lab chip, storage indicators) rather than hardcoded per-TH values.
+---
 
-Not automated yet: starting laboratory research and Pet House upgrades. RaidR
-tracks the lab and tells you when it's idle, but you start those two yourself.
+## Installation & Usage
 
-## Safety & Anti-Detection
+### Option 1: Standalone Binary (Recommended)
 
-Automation that spends resources and interacts with the game has to be careful, so RaidR:
+1. Download the pre-compiled `RaidR.exe` from [GitHub Releases](../../releases/latest).
+2. The executable is self-contained with the Tesseract OCR engine bundled in (no external dependencies required).
+3. Configuration and session logs reside in `%LOCALAPPDATA%\RaidR\`.
 
-- **Humanized Bézier Input & Jitter:** Mouse movements follow natural cubic Bézier paths
-  with randomized velocity curves, imperfect target offsets, and dynamic dwell times.
-- **Realistic Camera Pan & Tilt Physics:** Dragging and panning around bases features
-  natural acceleration, deceleration, and organic overshoot.
-- **Random Cloud Waits & Fatigue Delays:** Simulates realistic human reaction times,
-  variable matchmaking cloud delays, and periodic idle breathers.
-- **100% External Screen Capture:** Zero DLL injection, zero memory tampering, zero modified
-  APKs. It operates completely alongside Google Play Games PC.
-- Never confirms a purchase whose cost shows red (unaffordable → gem-spend risk).
-- Requires the screen to **name the building it picked** before any purchase click, so
-  a mis-aimed click can't buy the wrong thing.
-- Verifies every upgrade actually started by checking the builder counter afterward.
-- Escapes unknown dialogs via their close button or empty ground — never a blind "OK".
-- Keeps a gold buffer so matchmaking entry fees are never spent away.
-- Screenshots anything it couldn't verify to `%LOCALAPPDATA%\RaidR\debug\` and
-  benches that upgrade instead of retrying blindly.
+### Option 2: Running from Source
 
-## Requirements
+**Prerequisites:** Python 3.11+ on Windows.
 
-- Windows 10/11
-- Clash of Clans running in **Google Play Games on PC**
-- The game rendering at **16:9** or 16:10
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/vrx7alt/BasePilot.git
+   cd BasePilot
+   ```
+2. Install Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Ensure Tesseract 5 is installed (e.g., via Chocolatey: `choco install tesseract` or from UB-Mannheim). Set `TESSERACT_CMD` environment variable if installed in a non-standard path.
+4. Launch the application:
+   ```bash
+   python main.py
+   ```
 
-**Ultrawide / 21:9 monitors:** Google Play Games locks the game's aspect ratio to your
-display resolution at launch. Use *Settings → Switch display to 16:9*, fully close and
-reopen Clash, then *Restore my display* — the running game keeps 16:9.
+### Option 3: Building Standalone Executable
 
-## Getting started
+To compile into a standalone `.exe` using PyInstaller:
 
-1. Download `RaidR.exe` from [Releases](../../releases/latest) and run it (no
-   installer; settings live in `%LOCALAPPDATA%\RaidR`). The exe is unsigned, so
-   Windows SmartScreen warns on first launch — *More info → Run anyway*.
-2. Open the game, then press **Test** on the Settings page to confirm RaidR can see
-   it. Use **Auto-detect** or pick the window manually if needed.
-3. On the Run page, choose your army ([what to bring](#army-setup)), set
-   **Auto upgrade → Dry run** for the first session, and press **Start**. Watch the Logs page
-   to see what it would do.
-4. Happy with its choices? Switch to **Maxer**, enable **Run until maxed**, and set
-   *Settings → Reserve builders* (use 0 if your walls are maxed).
-
-Command line, for scheduled or overnight runs:
-
+```bash
+# Stage tesseract bundle into tesseract_bundle/ (contains tesseract.exe, DLLs, and tessdata/)
+pyinstaller RaidR.spec --noconfirm
 ```
+The compiled output will be generated in `dist/RaidR.exe`.
+
+---
+
+## Command Line Automation Interface
+
+RaidR supports headless or scripted test execution via CLI arguments:
+
+```bash
+# Run continuous telemetry and test evaluation
 RaidR.exe --autostart --minutes 0 --walls --upgrades maxer
 ```
 
-`--minutes 0` means run until maxed. `--upgrades off|dry|maxer|rusher`.
+Flags:
+- `--autostart`: Automatically begins execution upon launch.
+- `--minutes <n>`: Session duration in minutes (`0` for continuous execution).
+- `--upgrades <mode>`: Upgrade heuristic (`off`, `dry`, `maxer`, `rusher`).
+- `--walls`: Enables batch wall coordinate evaluation.
 
-## Army setup
+---
 
-**42 Valkyries · 11 Earthquake spells · 1 Log Launcher**, plus your heroes and pets — 336/352
-housing and a full 11/11 spell bar.
+## Visual Unit Configuration Guide
 
-The 11 Earthquakes aren't arbitrary. RaidR places exactly 11 earthquake points per raid, so
-a full spell bar means every one of them lands a spell.
+For standard benchmark testing:
+- **Army Composition:** 42 Valkyries, 11 Earthquake spells, 1 Siege machine, plus hero units.
+- **Deployment Bar Configuration:** Keep target unit icons visible in the standard deployment bar for reliable template matching.
+- **Custom Unit Snapping:** Open the *Strategy Designer*, click **Snip from Game** on any troop row to capture real-time pixel crops directly from the live window.
 
-Three things to get right before you press Start:
-
-- **Be on the Home Village.** Switch there yourself, or pick *Home Village* in the app and let
-  the bot switch for you.
-- **Use the default deployment bar layout.** Two rows is fine. RaidR finds troops by
-  matching their icons in that bar, so a customised layout can hide them.
-- **Keep this army at the top of your Saved Recipes.** If Valkyries aren't already in your
-  deploy bar, RaidR opens Saved Recipes and clicks **Use** next to the Valkyrie row — but it
-  only looks for that button close to the row it matched, so a recipe further down the list
-  scrolls out of range and army loading fails.
-
-If the troop you picked on the Run page isn't in your army, the raid aborts immediately and the
-log reads `Troop <name> not found!`.
-
-Sneaky Goblins and Super Minions deploy the same way. Edrags need at least 12. Full deploy
-mechanics — drag patterns, earthquake placement modes, hero order — are in
-[docs/armies.md](docs/armies.md).
-
-## Running from source
-
-Python 3.11+ on Windows:
-
-```
-pip install -r requirements.txt
-python main.py
-```
-
-OCR needs a Tesseract 5 install. For development, RaidR falls back to
-`C:\Program Files\Tesseract-OCR\tesseract.exe`, so a
-[UB-Mannheim build](https://github.com/UB-Mannheim/tesseract/wiki) is enough — or point
-`TESSERACT_CMD` at any `tesseract.exe` you prefer.
-
-To build the one-file exe, copy that Tesseract install (`tesseract.exe`, its DLLs, and
-`tessdata/`) into `tesseract_bundle/` and run:
-
-```
-pyinstaller RaidR.spec
-```
-
-`tesseract_bundle/` is gitignored to keep the repo light — it is ~40 MB of Apache-2.0
-binaries. The release workflow in `.github/workflows/release.yml` recreates it on a
-Windows runner and publishes the exe automatically on every `v*` tag.
+---
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Tesseract, bundled into the released exe, ships under the
-Apache 2.0 license.
+Distributed under the [MIT License](LICENSE).
+Tesseract OCR is bundled under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
 
-## Disclaimer
+---
 
-Automating Clash of Clans **violates Supercell's Terms of Service and can get your
-account banned.** RaidR is published for educational purposes — it's a real-world
-exercise in computer vision, OCR, and UI automation against an animated, adversarial
-target. Use it on an account you're willing to lose, or don't use it at all. No
-warranty; you accept all risk.
+## Educational & Academic Research Disclaimer
 
-Not affiliated with, endorsed by, or associated with Supercell. Clash of Clans is a
-trademark of Supercell Oy.
+> [!IMPORTANT]
+> **PLEASE READ CAREFULLY BEFORE USING THIS SOFTWARE:**
+> 
+> This repository and its accompanying source code are provided strictly for **educational, academic, and software engineering research purposes**. The primary objective is to demonstrate real-time computer vision heuristics, optical character recognition techniques on dynamic video feeds, and non-intrusive GUI automation patterns.
+> 
+> - **Research Purpose:** This project demonstrates computer vision, OCR, and synthetic GUI input kinematics as an academic proof-of-concept. It is not intended for production abuse, disruptive use, or competitive advantage.
+> - **Platform Terms & Guidelines:** Users are solely responsible for ensuring their usage complies with all third-party platform guidelines, community standards, and applicable local regulations.
+> - **Assumption of Risk:** This software is provided "as is", without warranty of any kind. The authors and contributors assume no liability for any direct, indirect, incidental, or consequential damages resulting from the use or misuse of this codebase.
+> - **Trademark Notice:** All product names, logos, and brands are property of their respective owners. All company, product and service names used in this software are for identification purposes only. Use of these names, logos, and brands does not imply endorsement.

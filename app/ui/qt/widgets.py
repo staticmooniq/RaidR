@@ -130,11 +130,17 @@ class ToggleSwitch(QCheckBox):
                 p.drawPath(track)
             text_col = QColor(TOKENS['primary'] if chk else TOKENS['text_muted'])
 
-        # Smooth white knob with gentle drop shadow
+        # Smooth knob with gentle drop shadow (dark knob when track is white for contrast)
         kx = x0 + self._knob_x
         ky = y0 + (th - kd) / 2.0
         p.setPen(Qt.NoPen)
-        p.setBrush(QColor(255, 255, 255) if not self._ud else QColor(90, 100, 115))
+        if self._ud:
+            knob_color = QColor(90, 100, 115)
+        elif TOKENS.get('on_primary') == '#000000' and chk and not self._danger:
+            knob_color = QColor(18, 18, 22)
+        else:
+            knob_color = QColor(255, 255, 255)
+        p.setBrush(knob_color)
         p.drawEllipse(QRectF(kx, ky, kd, kd))
 
         # Label with DEMIBOLD contrast

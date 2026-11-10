@@ -408,6 +408,35 @@ If L,T,R are collinear, uses a quadratic Bezier with control point chosen so t=0
         (fh, fw) = frame.shape[:2]
         return self._quantize_deploy_to_frame(xf, yf, fw, fh)
 
+    def _random_four_edge_point(self, frame):
+        """Random point distributed evenly across all four edges of the base perimeter."""
+        (fh, fw) = frame.shape[:2]
+        edges = [
+            ('left', 'top'),
+            ('top', 'right'),
+            ('right', 'bottom'),
+            ('bottom', 'left')
+        ]
+        c1, c2 = random.choice(edges)
+        p1 = self._point(c1)
+        p2 = self._point(c2)
+
+        # For bottom corner, clamp y so line doesn't dip into the deploy bar
+        y1 = p1[1] if c1 != 'bottom' else int(fh * 0.76)
+        y2 = p2[1] if c2 != 'bottom' else int(fh * 0.76)
+        # For top corner, clamp y so line doesn't go offscreen
+        y1 = max(int(fh * 0.05), y1)
+        y2 = max(int(fh * 0.05), y2)
+
+        t = random.uniform(0.15, 0.85)
+        px = p1[0] + (p2[0] - p1[0]) * t + random.randint(-15, 15)
+        py = y1 + (y2 - y1) * t + random.randint(-15, 15)
+
+        # Final safety clamps: stay away from window edges and deploy bar
+        cx = max(int(fw * 0.04), min(int(fw * 0.96), int(round(px))))
+        cy = max(int(fh * 0.05), min(int(fh * 0.77), int(round(py))))
+        return cx, cy
+
     
     @staticmethod
     def _point_on_polyline_at_distance(vertices, distance):
@@ -788,16 +817,23 @@ class CustomArmyStrategy(AttackStrategy):
         self.status_callback = status_callback
 
     def _find_troop_icon(self, frame, troop_conf):
-        """Find the troop icon on the deployment bar."""
+        """Find the troop icon on the deployment bar with multi-threshold fallback."""
         roi = self.vision.bottom_half_region(frame)
         template = troop_conf.get('template', '')
         is_custom = troop_conf.get('is_custom_image', False)
         
         if is_custom:
-            tx, ty = self.vision.find_template(frame, template, region = roi, scale_template = False)
-            if tx is not None:
-                return tx, ty
-            return self.vision.find_template(frame, template, region = roi, scale_template = True)
+            # 1. First try matching directly at 1:1 scale (perfect for real-time game crops)
+            for thresh in (0.78, 0.70, 0.62):
+                tx, ty = self.vision.find_template(frame, template, threshold=thresh, region=roi, scale_template=False)
+                if tx is not None:
+                    return tx, ty
+            # 2. Fallback with scale template adjustment if resolution changed
+            for thresh in (0.75, 0.65):
+                tx, ty = self.vision.find_template(frame, template, threshold=thresh, region=roi, scale_template=True)
+                if tx is not None:
+                    return tx, ty
+            return None, None
         else:
             tmpl_name = template if template.endswith('.png') else f"{template}.png"
             return self.vision.find_template(frame, tmpl_name, region = roi)
@@ -824,7 +860,7 @@ class CustomArmyStrategy(AttackStrategy):
             return True
 
         if deploy_style == 'diamond_perimeter':
-            tap_count = count if count > 0 else 12
+            tap_count = count if count > 0 else 18
             for _ in range(tap_count):
                 if ev and ev.is_set():
                     return True
@@ -834,68 +870,77 @@ class CustomArmyStrategy(AttackStrategy):
                 if fresh is not None:
                     frame = fresh
                 px, py = self._random_diamond_perimeter_point(frame)
-                self.input.click(px, py, pause = max(0.05, delay), rand = False)
+                self.input.click(px, py, pause = max(0.06, delay), rand = False)
 
         elif deploy_style == 'custom_zones':
             zone_sets = _load_deploy_zones()
+            tap_count = count if count > 0 else 25
             if zone_sets:
                 chosen = random.choice(zone_sets)
                 (fw, fh) = (frame.shape[1], frame.shape[0])
                 sx = fw / self.config.ref_width
                 sy = fh / self.config.ref_height
-                for (rx, ry) in chosen:
+                for i in range(tap_count):
                     if ev and ev.is_set():
                         return True
-                    px = max(0, min(fw - 1, int(round(rx * sx)) + random.randint(-8, 8)))
-                    py = max(0, min(fh - 1, int(round(ry * sy)) + random.randint(-8, 8)))
-                    self._reward_checkpoint()
+                    fresh, handled = self._reward_checkpoint()
+                    if handled and fresh is None:
+                        break
+                    rx, ry = chosen[i % len(chosen)]
+                    px = max(40, min(fw - 40, int(round(rx * sx)) + random.randint(-12, 12)))
+                    py = max(60, min(int(fh * 0.78), int(round(ry * sy)) + random.randint(-12, 12)))
                     self.input.click_at(px, py, rand=False)
                     if ev:
-                        ev.wait(max(0.1, delay))
+                        ev.wait(max(0.06, delay))
+                    else:
+                        time.sleep(max(0.06, delay))
             else:
-                tap_count = count if count > 0 else 10
                 for _ in range(tap_count):
                     if ev and ev.is_set():
                         return True
-                    px, py = self._random_diamond_perimeter_point(frame)
-                    self.input.click(px, py, pause = max(0.05, delay), rand = False)
+                    fresh, handled = self._reward_checkpoint()
+                    if handled and fresh is None:
+                        break
+                    if fresh is not None:
+                        frame = fresh
+                    px, py = self._random_four_edge_point(frame)
+                    self.input.click(px, py, pause = max(0.06, delay), rand = False)
 
         elif deploy_style == 'corner_focus':
-            tap_count = count if count > 0 else 14
-            corners = list(self.CORNER_ORDER)
-            c = random.choice(corners)
-            pt = self._point(c)
+            tap_count = count if count > 0 else 20
+            (fh, fw) = frame.shape[:2]
+            corner_spots = [
+                (int(fw * 0.16), int(fh * 0.46)), # Left side
+                (int(fw * 0.84), int(fh * 0.46)), # Right side
+                (int(fw * 0.35), int(fh * 0.22)), # Top-Left
+                (int(fw * 0.65), int(fh * 0.22)), # Top-Right
+            ]
+            base_x, base_y = random.choice(corner_spots)
             for _ in range(tap_count):
                 if ev and ev.is_set():
                     return True
-                self._reward_checkpoint()
-                cx, cy = self._expand_loc(*pt)
-                self.input.click(cx, cy, pause = max(0.05, delay), rand = False)
+                fresh, handled = self._reward_checkpoint()
+                if handled and fresh is None:
+                    break
+                if fresh is not None:
+                    frame = fresh
+                cx = max(40, min(fw - 40, base_x + random.randint(-40, 40)))
+                cy = max(60, min(int(fh * 0.78), base_y + random.randint(-40, 40)))
+                self.input.click(cx, cy, pause = max(0.06, delay), rand = False)
 
         else:
-            # Default 'four_edge_spam' drag across all 4 edges
-            corners = list(self.CORNER_ORDER)
-            start_idx = random.randint(0, 3)
-            direction = random.choice([1, -1])
-            ordered_corners = [corners[(start_idx + i * direction) % 4] for i in range(5)]
-            curr_x, curr_y = self._expand_loc(*self._point(ordered_corners[0]))
-            self.input.mouse_down(curr_x, curr_y)
-            if ev and ev.wait(0.4):
-                self.input.mouse_up(curr_x, curr_y)
-                return True
-            try:
-                total_duration = 5.0
-                segment_duration = total_duration / 4
-                for i in range(len(ordered_corners) - 1):
-                    if ev and ev.is_set():
-                        break
-                    next_c = ordered_corners[i + 1]
-                    target_x, target_y = self._expand_loc(*self._point(next_c))
-                    dur = random.uniform(segment_duration * 0.9, segment_duration * 1.1)
-                    self.input.human_move(curr_x, curr_y, target_x, target_y, duration = dur)
-                    curr_x, curr_y = target_x, target_y
-            finally:
-                self.input.mouse_up(curr_x, curr_y)
+            # Default 'four_edge_spam' (rapid taps distributed evenly across all 4 edges)
+            tap_count = count if count > 0 else 30
+            for _ in range(tap_count):
+                if ev and ev.is_set():
+                    return True
+                fresh, handled = self._reward_checkpoint()
+                if handled and fresh is None:
+                    break
+                if fresh is not None:
+                    frame = fresh
+                px, py = self._random_four_edge_point(frame)
+                self.input.click(px, py, pause = max(0.06, delay), rand = False)
 
         return True
 
@@ -951,5 +996,3 @@ class CustomArmyStrategy(AttackStrategy):
                 self.deploy_spells(frame)
 
         return True
-
-
