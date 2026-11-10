@@ -175,3 +175,63 @@ Clamp client-style coordinates into the current captured window rectangle
             time.sleep(random.uniform(0.05, 0.2))
 
 
+    def anti_inactivity_zoom(self):
+        '''Simulate random zoom-in and zoom-out cycles to strictly prevent inactivity logout.'''
+        hwnd = self.window_service.hwnd
+        if not hwnd:
+            return
+
+        try:
+            DESKTOP_ALL = 0x01FF
+            hdesk = self.user32.OpenDesktopW('default', 0, False, DESKTOP_ALL)
+            if hdesk:
+                self.user32.SetThreadDesktop(hdesk)
+        except Exception:
+            pass
+
+        class RECT(ctypes.Structure):
+            _fields_ = [
+                ('left', ctypes.c_long),
+                ('top', ctypes.c_long),
+                ('right', ctypes.c_long),
+                ('bottom', ctypes.c_long)]
+
+        rect = RECT()
+        if not self.user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+            return
+        w = rect.right - rect.left
+        h = rect.bottom - rect.top
+        if w <= 0 or h <= 0:
+            return
+
+        # Position cursor near the center of the village
+        cx = rect.left + int(w * random.uniform(0.42, 0.58))
+        cy = rect.top + int(h * random.uniform(0.38, 0.52))
+        self.user32.SetCursorPos(cx, cy)
+        time.sleep(random.uniform(0.04, 0.08))
+
+        # Randomly choose whether to zoom in first or zoom out first
+        first_zoom_in = random.choice([True, False])
+        steps = random.randint(3, 5)
+        MOUSEEVENTF_WHEEL = 0x0800
+        delta1 = 120 if first_zoom_in else -120
+        delta2 = -delta1
+
+        for _ in range(steps):
+            if self.stop_event and self.stop_event.is_set():
+                return
+            self.user32.mouse_event(MOUSEEVENTF_WHEEL, 0, 0, delta1, 0)
+            time.sleep(random.uniform(0.04, 0.08))
+
+        time.sleep(random.uniform(0.5, 0.8))
+
+        for _ in range(steps):
+            if self.stop_event and self.stop_event.is_set():
+                return
+            self.user32.mouse_event(MOUSEEVENTF_WHEEL, 0, 0, delta2, 0)
+            time.sleep(random.uniform(0.04, 0.08))
+
+        logger.info('Anti-inactivity zoom completed (%s first, %d steps)', 'in' if first_zoom_in else 'out', steps)
+
+
+

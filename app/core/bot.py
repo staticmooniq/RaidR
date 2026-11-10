@@ -45,6 +45,7 @@ _BB_GOLD_PRIORITISE_MIN_STARS = 3
 _BB_TWO_STAR_THRESHOLD = 2        # Extras -> "2 Star": end the battle at this many stars
 _BB_SEARCH_CLOUD_TEMPLATES = ('clouds.png', 'bbsearching.png')
 _BB_CLOUD_CLEAR_SECONDS = 2.0     # "searching for opponents" clouds must be gone this long before deploying
+_ANTI_INACTIVITY_ZOOM_INTERVAL_SECONDS = 120.0  # strictly zoom in/out every 2 minutes
 _BB_WALL_SCAN_INTERVAL_SECONDS = 45
 _BB_WALL_FAILED_RETRY_SECONDS = 15
 _BB_WALL_ADD_TEMPLATE = 'bbwalladd.png'          # enabled "Add Wall" (+1) button in the wall bar
@@ -266,7 +267,19 @@ wall upgrades for the first pre-Attack snapshot that would otherwise count as an
         self._suppress_loot_negative_error_once = False
 
     
+    def maybe_anti_inactivity_zoom(self, force = False):
+        """Strictly zoom in randomly and out every 2 minutes to prevent inactivity timeout."""
+        now = time.monotonic()
+        if force or (now - getattr(self, '_last_anti_inactivity_zoom', 0) >= _ANTI_INACTIVITY_ZOOM_INTERVAL_SECONDS):
+            try:
+                self.input.anti_inactivity_zoom()
+            except Exception:
+                logger.warning('Anti-inactivity zoom failed', exc_info = True)
+            self._last_anti_inactivity_zoom = time.monotonic()
+
+
     def _check_stop(self):
+        self.maybe_anti_inactivity_zoom()
         if self.stop_event.is_set():
             raise InterruptedError('Bot stopped by user')
 
@@ -2000,60 +2013,49 @@ a price change can never turn a match into a miss.'''
         return (frame, prices)
 
     
-    def _bb_wall_batch_sequence(self):
-        '''
-Builder Base wall batch, in the bar's own order:
-
-1. ``Upgrade More`` (clicked by the caller) opens the wall-selection bar.
-2. ``Add Wall`` repeatedly until **both** printed prices are red — the game's own
-   "cannot pay" state, read from the price digits beside each currency icon.
-3. ``Remove Wall`` exactly once, so the batch is one wall smaller than unaffordable.
-4. Click the ``Upgrade`` button whose price is **not** red (Builder Elixir first: Builder
-   Gold is also spent on defenses and the Battle Machine), then ``Okay``.
-
-Nothing is purchased unless both reds and the post-remove payable price were seen.
-'''
+    def _bb_wall_batch_sequence(self, target_walls = 5):
+        """Builder Base wall batch: up to 5 walls per pass."""
         added = 0
         (frame, prices) = self._bb_wall_read_prices(attempts = 6)
-        for _ in range(_BB_WALL_BATCH_MAX_ADDS + 1):
-            if frame is None or prices is None:
-                return False
-            if not prices.found_both:
-                logger.warning('Builder Base walls: the two Upgrade prices were not found in the wall bar — stopping without purchase')
-                return False
-            if prices.both_red or added >= _BB_WALL_BATCH_MAX_ADDS:
+        if frame is None or prices is None or not prices.found_both:
+            logger.warning('Builder Base walls: the two Upgrade prices were not found in the wall bar - stopping without purchase')
+            return False
+
+        # 1 wall is already selected upon entering Upgrade More; add up to target_walls total
+        adds_needed = max(0, target_walls - 1)
+        for i in range(adds_needed):
+            self._check_stop()
+            if prices.both_red:
                 break
             add = self._bb_wall_add_center(frame)
             if not add:
-                logger.warning('Builder Base walls: Add Wall button not found — stopping without purchase')
-                return False
+                logger.warning('Builder Base walls: Add Wall button not found')
+                break
             self.input.click(*add, pause = _BB_WALL_ADD_CLICK_SECONDS, rand = False)
             added += 1
             (frame, prices) = self._bb_wall_read_prices()
-        if not prices or not prices.both_red:
-            logger.warning('Builder Base walls: both prices never turned red after %d Add Wall tap(s) — nothing purchased', added)
-            return False
-        logger.info('Builder Base walls: both prices red after %d wall(s); removing one', added)
-        remove = self._bb_wall_remove_center(frame)
-        if not remove:
-            logger.warning('Builder Base walls: Remove Wall button not found — stopping without purchase')
-            return False
-        self.input.click(*remove, pause = _BB_WALL_REMOVE_CLICK_SECONDS, rand = False)
-        # The red price needs a frame or two to become payable again, so re-read instead of
-        # judging the removal from the very first screenshot.
-        (frame, prices) = self._bb_wall_read_prices()
-        for _ in range(4):
-            if frame is None or prices is None or (prices.found_both and not prices.both_red):
+
+        # If both prices are red, remove walls until affordable
+        while prices and prices.both_red and added > 0:
+            self._check_stop()
+            logger.info('Builder Base walls: both prices red; removing one wall')
+            remove = self._bb_wall_remove_center(frame)
+            if not remove:
                 break
-            if self.stop_event.wait(0.3):
-                return None
+            self.input.click(*remove, pause = _BB_WALL_REMOVE_CLICK_SECONDS, rand = False)
+            added -= 1
             (frame, prices) = self._bb_wall_read_prices()
+
         if frame is None or prices is None or not prices.found_both:
-            logger.warning('Builder Base walls: prices unreadable after Remove Wall — stopping without purchase')
+            logger.warning('Builder Base walls: prices unreadable - stopping without purchase')
             return False
+
         if prices.both_red:
-            logger.warning('Builder Base walls: both prices are still red after removing one wall — stopping without purchase')
+            logger.warning('Builder Base walls: cannot afford wall upgrade - stopping without purchase')
             return False
+
+        total_walls = 1 + added
+        logger.info('Builder Base walls: upgrading batch of %d wall(s)', total_walls)
         return self._bb_wall_pay_and_okay(prices)
 
     

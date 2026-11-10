@@ -75,6 +75,23 @@ Resolution order:
             logger.error('Frozen build: tesseract.exe not found under %s.', base)
             return None
             
+        # Check bundled tesseract in project root (dev / portable)
+        repo_bundle = Path(__file__).resolve().parent.parent.parent / 'tesseract_bundle' / 'tesseract.exe'
+        if repo_bundle.is_file():
+            pytesseract.pytesseract.tesseract_cmd = str(repo_bundle)
+            td = _tessdata_dir(repo_bundle.parent)
+            os.environ['TESSDATA_PREFIX'] = str(td.resolve()) + os.sep
+            logger.info('Tesseract found in repository bundle at %s, tessdata=%s', repo_bundle, td)
+            return None
+
+        cwd_bundle = Path('tesseract_bundle/tesseract.exe').resolve()
+        if cwd_bundle.is_file():
+            pytesseract.pytesseract.tesseract_cmd = str(cwd_bundle)
+            td = _tessdata_dir(cwd_bundle.parent)
+            os.environ['TESSDATA_PREFIX'] = str(td.resolve()) + os.sep
+            logger.info('Tesseract found in working directory bundle at %s, tessdata=%s', cwd_bundle, td)
+            return None
+
         win = Path(r'C:\Program Files\Tesseract-OCR\tesseract.exe')
         if win.is_file():
             pytesseract.pytesseract.tesseract_cmd = str(win)

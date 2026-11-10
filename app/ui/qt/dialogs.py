@@ -1,7 +1,8 @@
 '''Modal dialogs for the Qt UI.'''
 from __future__ import annotations
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout
+from PySide6.QtWidgets import QDialog, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout, QTextBrowser
+from app import __version__
 from app.ui.qt.theme import SPACING, TOKENS
 from app.ui.qt.widgets import danger_button, neutral_button
 
@@ -63,3 +64,70 @@ class RankedAttackConfirmDialog(QDialog):
     def ask(cls, parent, minutes):
         dlg = cls(parent, minutes)
         return dlg.exec() == QDialog.Accepted
+
+
+class ChangelogDialog(QDialog):
+    """Modal dialog displaying RaidR version changelog and release history."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(f"RaidR v{__version__} — Changelog")
+        self.resize(540, 480)
+        self.setMinimumSize(440, 360)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(SPACING['lg'], SPACING['lg'], SPACING['lg'], SPACING['lg'])
+        layout.setSpacing(12)
+
+        title = QLabel(f"🚀 What's New in RaidR v{__version__}")
+        title.setStyleSheet(f"font-size: 16px; font-weight: 800; color: {TOKENS.get('primary', '#E11D48')};")
+        layout.addWidget(title)
+
+        browser = QTextBrowser()
+        browser.setOpenExternalLinks(True)
+        html = self._get_changelog_html()
+        browser.setHtml(html)
+        browser.setStyleSheet(f"""
+            QTextBrowser {{
+                background-color: {TOKENS.get('surface_hi', '#1E293B')};
+                border: 1px solid {TOKENS.get('border_hi', '#3E4D66')};
+                border-radius: 8px;
+                padding: 12px;
+                color: {TOKENS.get('text', '#E2E8F0')};
+            }}
+        """)
+        layout.addWidget(browser, stretch=1)
+
+        row = QHBoxLayout()
+        row.addStretch()
+        btn_close = neutral_button('Close', parent=self)
+        btn_close.clicked.connect(self.accept)
+        row.addWidget(btn_close)
+        layout.addLayout(row)
+
+    def _get_changelog_html(self) -> str:
+        return f"""
+        <div style='font-family: sans-serif; font-size: 12px; line-height: 1.6; color: {TOKENS.get('text', '#E2E8F0')};'>
+            <h3 style='color: {TOKENS.get('primary', '#E11D48')}; margin-bottom: 4px;'>Version 1.1 (Current)</h3>
+            <ul>
+                <li><b>Text-Only Wall Action Templates:</b> Replaced level-dependent wall templates with clean text-only crops for 'Upgrade More', 'Add Wall', and 'Remove Wall' to guarantee 100% accuracy across all wall levels.</li>
+                <li><b>5-Wall Batch Upgrading:</b> Configured Builder Base wall upgrading to upgrade in batches of 5 walls per pass.</li>
+                <li><b>Strict Anti-Inactivity Zoom:</b> Implemented 2-minute random zoom in/out keep-alive cycles to prevent game disconnection and inactivity logout.</li>
+                <li><b>Automatic Bundled Tesseract Discovery:</b> Automatically resolves the bundled Tesseract OCR binaries in both source and frozen environments.</li>
+                <li><b>Standalone Wall Runner:</b> Added <code>--bb-walls-only</code> CLI flag for dedicated Builder Base wall automation.</li>
+            </ul>
+
+            <h3 style='color: {TOKENS.get('text_muted', '#8FA0B8')}; margin-bottom: 4px; margin-top: 14px;'>Version 1.0.2</h3>
+            <ul>
+                <li>Matchmaking resource loot thresholds and skip limits.</li>
+                <li>HUD optical telemetry and live gain rates.</li>
+                <li>Automatic Clan Capital screen recovery.</li>
+            </ul>
+
+            <h3 style='color: {TOKENS.get('text_muted', '#8FA0B8')}; margin-bottom: 4px; margin-top: 14px;'>Version 1.0.1</h3>
+            <ul>
+                <li>Integrated in-app auto-updater and silent updater script.</li>
+                <li>Taskbar thumbnail preview on Windows 10/11.</li>
+            </ul>
+        </div>
+        """

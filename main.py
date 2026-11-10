@@ -27,6 +27,11 @@ logger = setup_logger('Main')
 def main():
     try:
         configure_tesseract()
+        if '--bb-walls-only' in sys.argv or '--walls-only' in sys.argv:
+            from tools.run_bb_walls_only import run_bb_walls
+            once = '--once' in sys.argv
+            run_bb_walls(once=once)
+            return
         try:
             from app.services.display import DisplayService
             DisplayService().restore_if_pending()

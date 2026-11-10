@@ -649,6 +649,11 @@ class SettingsPage(QWidget):
 
         self._pending_update_info: Optional[UpdateInfo] = None
 
+        self._btn_changelog = chip_button('Changelog', parent=self)
+        self._btn_changelog.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_changelog.clicked.connect(self._open_changelog_dialog)
+        row.addWidget(self._btn_changelog)
+
         self._btn_check_updates = chip_button('Check for Updates', parent=self)
         self._btn_check_updates.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_check_updates.clicked.connect(self._manual_check_updates)
@@ -699,6 +704,10 @@ class SettingsPage(QWidget):
         self._update_status_lbl.setText("You are running the latest version.")
         self._update_status_lbl.setStyleSheet(f"color: {TOKENS['text_muted']}; font-size: 12px;")
         self._btn_install_update.setVisible(False)
+
+    def _open_changelog_dialog(self):
+        dlg = ChangelogDialog(parent=self.window())
+        dlg.exec()
 
     def _open_update_dialog(self):
         if not self._pending_update_info:

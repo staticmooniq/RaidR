@@ -9,7 +9,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('templates', 'templates'), ('assets', 'assets'), ('tesseract_bundle', 'tesseract')],
+    datas=[('templates', 'templates'), ('assets', 'assets'), ('tesseract_bundle', 'tesseract'), ('CHANGELOG.md', '.')],
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},

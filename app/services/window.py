@@ -93,6 +93,14 @@ Resolve the game-surface HWND.
 Honors a user-pinned selection (Settings → Game window) first; otherwise falls back to
 auto-detection (Google Play Games window with a ``CROSVM*`` child surface).
 '''
+        try:
+            DESKTOP_ALL = 0x01FF
+            hdesk = self.user32.OpenDesktopW('default', 0, False, DESKTOP_ALL)
+            if hdesk:
+                self.user32.SetThreadDesktop(hdesk)
+        except Exception:
+            pass
+
         selection = load_window_selection()
         self.hwnd = self._resolve_hwnd(selection)
         if self.hwnd:
