@@ -110,9 +110,11 @@ class ChangelogDialog(QDialog):
         <div style='font-family: sans-serif; font-size: 12px; line-height: 1.6; color: {TOKENS.get('text', '#E2E8F0')};'>
             <h3 style='color: {TOKENS.get('primary', '#E11D48')}; margin-bottom: 4px;'>Version 1.1 (Current)</h3>
             <ul>
+                <li><b>In-Built Game Launcher:</b> One-click launch button in the navbar and controls to launch Clash of Clans via Google Play Games PC.</li>
+                <li><b>Strict Background Input Isolation:</b> Zero interference with YouTube or other apps; eliminated mouse cursor movement and global scroll events.</li>
                 <li><b>Text-Only Wall Action Templates:</b> Replaced level-dependent wall templates with clean text-only crops for 'Upgrade More', 'Add Wall', and 'Remove Wall' to guarantee 100% accuracy across all wall levels.</li>
                 <li><b>5-Wall Batch Upgrading:</b> Configured Builder Base wall upgrading to upgrade in batches of 5 walls per pass.</li>
-                <li><b>Strict Anti-Inactivity Zoom:</b> Implemented 2-minute random zoom in/out keep-alive cycles to prevent game disconnection and inactivity logout.</li>
+                <li><b>Strict Anti-Inactivity Zoom:</b> Implemented 2-minute random zoom in/out keep-alive cycles to prevent game disconnection and inactivity logout (safely paused during battles).</li>
                 <li><b>Automatic Bundled Tesseract Discovery:</b> Automatically resolves the bundled Tesseract OCR binaries in both source and frozen environments.</li>
                 <li><b>Standalone Wall Runner:</b> Added <code>--bb-walls-only</code> CLI flag for dedicated Builder Base wall automation.</li>
             </ul>

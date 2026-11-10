@@ -102,3 +102,9 @@ class BotController(QObject):
 
     def on_bot_finished(self):
         self.runningChanged.emit(False)
+
+    def launch_game(self) -> tuple[bool, str]:
+        from app.services.game_launcher import launch_clash_of_clans
+        success, msg = launch_clash_of_clans()
+        self.statusChanged.emit(msg, not success)
+        return success, msg

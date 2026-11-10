@@ -155,6 +155,34 @@ class MainWindow(QMainWindow):
         nav_layout.addWidget(self._discord_btn)
         nav_layout.addSpacing(10)
 
+        # Launch Game Button in Navbar
+        self._nav_launch_btn = QPushButton("🎮 Launch Game")
+        self._nav_launch_btn.setProperty("role", "nav_tab")
+        self._nav_launch_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._nav_launch_btn.setToolTip("Launch Clash of Clans via Google Play Games PC")
+        self._nav_launch_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(34, 197, 94, 0.15);
+                color: #22C55E;
+                border: 1px solid rgba(34, 197, 94, 0.45);
+                border-radius: 9px;
+                padding: 6px 14px;
+                font-size: 12px;
+                font-weight: 700;
+            }
+            QPushButton:hover {
+                background: rgba(34, 197, 94, 0.28);
+                color: #4ADE80;
+                border: 1px solid rgba(34, 197, 94, 0.65);
+            }
+            QPushButton:pressed {
+                background: rgba(34, 197, 94, 0.4);
+            }
+        """)
+        self._nav_launch_btn.clicked.connect(self._launch_game_from_nav)
+        nav_layout.addWidget(self._nav_launch_btn)
+        nav_layout.addSpacing(10)
+
         root.addWidget(navbar)
 
         # Update Banner placed right below navbar
@@ -215,6 +243,10 @@ class MainWindow(QMainWindow):
         for key in ('geometry', 'windowState', 'run/autoUpgrade', 'run/upgradeWalls', 'run/untilMaxed', 'run/minutes'):
             if legacy.contains(key):
                 self._settings.setValue(key, legacy.value(key))
+
+    def _launch_game_from_nav(self):
+        success, msg = self._controller.launch_game()
+        self._status_label.setText(f"🎮 {msg}")
 
     def _build_status_bar(self):
         bar = QStatusBar()

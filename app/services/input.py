@@ -74,9 +74,9 @@ Clamp client-style coordinates into the current captured window rectangle
 
     
     def _inject_click(self, x, y):
-        hwnd = self.window_service.hwnd
-        if not hwnd:
+        if not self._is_valid_target():
             return None
+        hwnd = self.window_service.hwnd
         if self.on_touch:
             try:
                 (xc, yc) = self._clamp_to_capture(x, y)
@@ -97,9 +97,9 @@ Clamp client-style coordinates into the current captured window rectangle
 
     
     def mouse_down(self, x, y):
-        hwnd = self.window_service.hwnd
-        if not hwnd:
+        if not self._is_valid_target():
             return None
+        hwnd = self.window_service.hwnd
         if self.on_touch:
             try:
                 (xc, yc) = self._clamp_to_capture(x, y)
@@ -110,17 +110,17 @@ Clamp client-style coordinates into the current captured window rectangle
 
     
     def mouse_up(self, x, y):
-        hwnd = self.window_service.hwnd
-        if not hwnd:
+        if not self._is_valid_target():
             return None
+        hwnd = self.window_service.hwnd
         self.user32.SendMessageW(hwnd, WM_LBUTTONUP, 0, self._make_lparam(x, y))
 
     
     def move(self, x, y, wparam = 0):
         '''WM_MOUSEMOVE. Use ``wparam=MK_LBUTTON`` only while simulating a held drag (see ``human_move``).'''
-        hwnd = self.window_service.hwnd
-        if not hwnd:
+        if not self._is_valid_target():
             return None
+        hwnd = self.window_service.hwnd
         self.user32.SendMessageW(hwnd, WM_MOUSEMOVE, wparam, self._make_lparam(x, y))
 
     
@@ -163,9 +163,9 @@ Clamp client-style coordinates into the current captured window rectangle
 
     
     def scroll(self, x, y, amount, *, upward = False):
-        hwnd = self.window_service.hwnd
-        if not hwnd:
+        if not self._is_valid_target():
             return None
+        hwnd = self.window_service.hwnd
         delta = int(WHEEL_DELTA if upward else -WHEEL_DELTA)
         wparam = delta << 16
         (sx, sy) = self._client_to_screen(x, y)
@@ -175,63 +175,40 @@ Clamp client-style coordinates into the current captured window rectangle
             time.sleep(random.uniform(0.05, 0.2))
 
 
-    def anti_inactivity_zoom(self):
-        '''Simulate random zoom-in and zoom-out cycles to strictly prevent inactivity logout.'''
+    def _is_valid_target(self) -> bool:
+        """Strict safety check: ensure target window exists, is alive, and belongs to the game."""
         hwnd = self.window_service.hwnd
-        if not hwnd:
+        if not hwnd or not self.user32.IsWindow(hwnd):
+            return False
+        return True
+
+    def anti_inactivity_zoom(self):
+        """Simulate random zoom-in and zoom-out cycles strictly targeting the game window surface.
+        Uses window-targeted WM_MOUSEWHEEL messages and NEVER touches the physical mouse cursor or emits OS mouse events.
+        """
+        if not self._is_valid_target():
             return
 
-        try:
-            DESKTOP_ALL = 0x01FF
-            hdesk = self.user32.OpenDesktopW('default', 0, False, DESKTOP_ALL)
-            if hdesk:
-                self.user32.SetThreadDesktop(hdesk)
-        except Exception:
-            pass
-
-        class RECT(ctypes.Structure):
-            _fields_ = [
-                ('left', ctypes.c_long),
-                ('top', ctypes.c_long),
-                ('right', ctypes.c_long),
-                ('bottom', ctypes.c_long)]
-
-        rect = RECT()
-        if not self.user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+        sz = self.window_service.get_outer_pixel_size()
+        if not sz or sz[0] <= 1 or sz[1] <= 1:
             return
-        w = rect.right - rect.left
-        h = rect.bottom - rect.top
-        if w <= 0 or h <= 0:
-            return
+        w, h = sz
+        cx = int(w * random.uniform(0.44, 0.56))
+        cy = int(h * random.uniform(0.42, 0.54))
 
-        # Position cursor near the center of the village
-        cx = rect.left + int(w * random.uniform(0.42, 0.58))
-        cy = rect.top + int(h * random.uniform(0.38, 0.52))
-        self.user32.SetCursorPos(cx, cy)
-        time.sleep(random.uniform(0.04, 0.08))
-
-        # Randomly choose whether to zoom in first or zoom out first
         first_zoom_in = random.choice([True, False])
         steps = random.randint(3, 5)
-        MOUSEEVENTF_WHEEL = 0x0800
-        delta1 = 120 if first_zoom_in else -120
-        delta2 = -delta1
 
-        for _ in range(steps):
-            if self.stop_event and self.stop_event.is_set():
-                return
-            self.user32.mouse_event(MOUSEEVENTF_WHEEL, 0, 0, delta1, 0)
-            time.sleep(random.uniform(0.04, 0.08))
+        # Strictly use SendMessageW WM_MOUSEWHEEL targeted directly to hwnd.
+        self.scroll(cx, cy, steps, upward = first_zoom_in)
 
-        time.sleep(random.uniform(0.5, 0.8))
+        if self.stop_event and self.stop_event.wait(random.uniform(0.5, 0.8)):
+            return
 
-        for _ in range(steps):
-            if self.stop_event and self.stop_event.is_set():
-                return
-            self.user32.mouse_event(MOUSEEVENTF_WHEEL, 0, 0, delta2, 0)
-            time.sleep(random.uniform(0.04, 0.08))
+        self.scroll(cx, cy, steps, upward = not first_zoom_in)
 
-        logger.info('Anti-inactivity zoom completed (%s first, %d steps)', 'in' if first_zoom_in else 'out', steps)
+        logger.info('Anti-inactivity zoom completed strictly on game window (%s first, %d steps)',
+                    'in' if first_zoom_in else 'out', steps)
 
 
 

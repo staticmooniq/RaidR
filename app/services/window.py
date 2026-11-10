@@ -315,9 +315,8 @@ every detection times out with no visible cause.'''
                 return None
             if rect.left > -31999 and rect.top > -31999:
                 return None
-            logger.info('Game window minimized — restoring it to resume capture')
-            self.user32.ShowWindow(root, 9)  # SW_RESTORE
-            self.user32.SetForegroundWindow(root)
+            logger.info('Game window minimized — restoring without activating to resume capture')
+            self.user32.ShowWindow(root, 4)  # SW_SHOWNOACTIVATE (4): restore without stealing foreground from user
             time.sleep(1.0)
         except Exception:
             logger.debug('Minimize check failed', exc_info = True)

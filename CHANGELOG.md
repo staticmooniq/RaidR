@@ -5,14 +5,18 @@ All notable changes to the RaidR project are documented in this file.
 ## [1.1] - 2026-11-10
 
 ### Added
+- **In-Built Game Launcher:** Added a one-click "🎮 Launch Game" button to the top navigation bar and the Run page controls to launch Clash of Clans directly via Google Play Games PC.
+- **Strict Background Window Input Isolation:** Hardened input dispatch to strictly target the game window surface (`hwnd`). Completely eliminated cursor movement (`SetCursorPos`) and hardware wheel events (`mouse_event`) so browsing YouTube or working in other apps will never experience unwanted clicks, cursor jumps, or scrolls.
+- **No-Steal Window Restore:** Background capture restores minimized windows via `SW_SHOWNOACTIVATE` without stealing foreground focus from the user's active apps.
 - **Text-Only Templates for Wall Actions:** Added clean text-only templates for `Upgrade More`, `Add Wall`, and `Remove Wall` across both 16:9 and 16:10 aspect ratios to ensure 100% template match confidence regardless of wall level graphics.
 - **5-Wall Batch Upgrade Routine:** Builder Base wall upgrading now operates in batches of 5 walls at a time, calculating affordability and safely executing the batch.
-- **Strict Anti-Inactivity Zoom:** Implemented `anti_inactivity_zoom` to simulate random zoom in/out cycles strictly every 2 minutes, preventing automatic logout due to inactivity.
+- **Battle & Deployment Keep-Alive Protection:** Anti-inactivity zoom is strictly paused during battles and troop drops, only running while safely idling in the village.
 - **Automated Bundled Tesseract Discovery:** Automatic fallback and binding for `tesseract_bundle/tesseract.exe` in source execution mode without requiring system-wide installation.
 - **CLI Automation Flag:** Added `--bb-walls-only` (and `tools/run_bb_walls_only.py`) for standalone or automated Builder Base wall upgrading.
 - **In-App Changelog Viewer:** Added a Changelog dialog in the settings interface to inspect version history and new features.
 
 ### Fixed
+- Fixed accidental clicks and scrolls on YouTube and external windows during background automation.
 - Fixed Builder Base wall upgrader failure caused by template mismatch on Level 8+ wall icons.
 - Fixed `_bb_wall_batch_sequence` failure where unlimited adds waited indefinitely for unaffordable resource states.
 - Fixed OCR failure in dev/source mode when Tesseract was not installed in `Program Files`.
