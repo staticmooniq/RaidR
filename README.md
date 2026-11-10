@@ -23,6 +23,24 @@ Developed as a case study in **black-box UI testing and visual telemetry** again
 
 ---
 
+## What It Does
+
+RaidR provides an autonomous session execution pipeline powered by non-intrusive computer vision and real-time OCR telemetry:
+
+- **Automated Raid & Match Navigation:** Identifies matchmaking controls, scans available resource targets with configurable minimum loot thresholds (Gold, Elixir, Dark Elixir), and navigates the search interface automatically.
+- **Visual Strategy & Unit Deployment:** Executes tactical troop deployment routines using template matching to recognize unit badges in the deployment bar. Supports standard presets (*Full Four-Edge Spam*, *Diamond Perimeter*, *Corner Focus*) as well as customized multi-unit configurations via the visual **Strategy Designer**.
+- **Visual Upgrade Advisor (OCR-driven):** Reads the builder overview menu directly using Tesseract 5 OCR to evaluate upgrade costs and allocate available resources:
+  - **Maxer Heuristic:** Prioritizes defense and building upgrades while safeguarding higher-tier progression milestones until structures are maxed.
+  - **Rusher Heuristic:** Commits to central progression targets as soon as resource requirements are met.
+  - **Dry Run Mode:** Simulates and logs would-be upgrades without issuing input clicks—ideal for verifying OCR accuracy and decision rules.
+- **Intelligent Idle & Resource Gatekeeper:** Automatically detects when builders are fully utilized or resource storages reach capacity. Rather than initiating redundant cycles that would waste resources, the engine enters an intelligent **Idle state**, periodically polling builder timers and resuming activity as soon as capacity frees up.
+- **Batch Wall Upgrade Heuristics:** Automatically pools excess elixir and gold into sequential wall upgrades above user-defined reserve thresholds, preserving adequate reserves for match entry fees.
+- **Live Optical Telemetry & Performance Metrics:** Tracks gold, elixir, and dark elixir acquisitions directly from post-battle and HUD overlays. Calculates real-time **gain-per-hour** performance rates verified across multiple frames to eliminate OCR noise.
+- **Dual Village Support:** Autonomous session management for both primary village and secondary base architectures.
+- **Error Recovery & Pop-up Handling:** Automatically recognizes and recovers from unexpected interruption dialogues, disconnects, confirmation prompts, and reward overlays.
+
+---
+
 ## Technical Architecture & Core Capabilities
 
 ### 1. Computer Vision Pipeline (OpenCV)
@@ -153,9 +171,9 @@ Tesseract OCR is bundled under the [Apache 2.0 License](https://www.apache.org/l
 > [!IMPORTANT]
 > **PLEASE READ CAREFULLY BEFORE USING THIS SOFTWARE:**
 > 
-> This repository and its accompanying source code are provided strictly for **educational, academic, and software engineering research purposes**. The primary objective is to demonstrate real-time computer vision heuristics, optical character recognition techniques on dynamic video feeds, and non-intrusive GUI automation patterns.
+> RaidR is an open-source research suite published strictly for **educational, academic, and software engineering research purposes**. It is designed as a real-world case study exploring the implementation of real-time computer vision, optical character recognition (OCR), and non-intrusive GUI automation patterns against dynamic, animated graphical targets.
 > 
-> - **Research Purpose:** This project demonstrates computer vision, OCR, and synthetic GUI input kinematics as an academic proof-of-concept. It is not intended for production abuse, disruptive use, or competitive advantage.
-> - **Platform Terms & Guidelines:** Users are solely responsible for ensuring their usage complies with all third-party platform guidelines, community standards, and applicable local regulations.
-> - **Assumption of Risk:** This software is provided "as is", without warranty of any kind. The authors and contributors assume no liability for any direct, indirect, incidental, or consequential damages resulting from the use or misuse of this codebase.
-> - **Trademark Notice:** All product names, logos, and brands are property of their respective owners. All company, product and service names used in this software are for identification purposes only. Use of these names, logos, and brands does not imply endorsement.
+> - **Pure External Observation:** Operates solely via screen capture, template matching, OCR heuristics, and standard OS accessibility input messages. It performs zero memory reading, zero DLL injection, zero binary modification, and zero network packet inspection.
+> - **Platform Guidelines & User Responsibility:** Automated interaction with third-party software may conflict with platform rules or end-user terms. This project is intended solely as an academic proof-of-concept and technical demonstration, not for disruptive or unfair use. Users assume full personal responsibility for how they choose to evaluate, run, or utilize this codebase.
+> - **No Warranty & Limitation of Liability:** This software is provided "as is", without warranty of any kind, express or implied. The author and contributors assume no liability for any direct, indirect, incidental, or consequential damages or actions resulting from the use or misuse of this codebase.
+> - **Trademark & Fair Use Notice:** All product names, logos, trademarks, and registered trademarks belong to their respective owners. *Clash of Clans* and *Supercell* are registered trademarks of Supercell Oy. This project is an independent educational research suite and is not affiliated with, endorsed by, authorized by, or in any way officially connected to Supercell Oy.
