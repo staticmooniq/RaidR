@@ -267,8 +267,19 @@ wall upgrades for the first pre-Attack snapshot that would otherwise count as an
         self._suppress_loot_negative_error_once = False
 
     
+    def reset_inactivity_timer(self):
+        """Reset the inactivity keep-alive timer so the 2-minute countdown starts fresh."""
+        self._last_anti_inactivity_zoom = time.monotonic()
+
     def maybe_anti_inactivity_zoom(self, force = False):
-        """Strictly zoom in randomly and out every 2 minutes to prevent inactivity timeout."""
+        """Strictly zoom in randomly and out every 2 minutes to prevent inactivity timeout.
+        
+        Paused during battles and troop deployment to prevent camera movements from interfering
+        with troop placement or timing.
+        """
+        if not force:
+            if getattr(self, '_in_battle', False) or getattr(self, '_is_deploying', False):
+                return
         now = time.monotonic()
         if force or (now - getattr(self, '_last_anti_inactivity_zoom', 0) >= _ANTI_INACTIVITY_ZOOM_INTERVAL_SECONDS):
             try:
@@ -949,7 +960,12 @@ deselect, which would eat the upcoming Attack click.'''
         troop_failures = 0
         while deadline is None or time.time() < deadline:
             self._check_stop()
-            outcome = self._find_match_and_attack(method_id, ranked_fill)
+            self._in_battle = True
+            try:
+                outcome = self._find_match_and_attack(method_id, ranked_fill)
+            finally:
+                self._in_battle = False
+                self.reset_inactivity_timer()
             self._return_home()
             self._home_screen_recovery()
             if outcome == 'ranked_limit':
@@ -1090,6 +1106,7 @@ end battle (2-star / gold / elixir / natural) → Return Home.'''
                 self._recover_stuck_screen()
                 continue
             self.input.click(fx, fy, pause = 0.15)
+            self._in_battle = True
             # Find Now kicks off matchmaking: the cloud screen can sit there for ~20s before the
             # enemy base appears. Never deploy into it — hold until the clouds clear (a base that
             # loads without any clouds only needs the absence to hold for _BB_CLOUD_CLEAR_SECONDS).
@@ -1101,6 +1118,8 @@ end battle (2-star / gold / elixir / natural) → Return Home.'''
                 logger.warning(msg)
                 if cb:
                     cb(msg)
+                self._in_battle = False
+                self.reset_inactivity_timer()
                 continue
             frame = self.window.screenshot()
             if frame is None:
@@ -1144,6 +1163,8 @@ end battle (2-star / gold / elixir / natural) → Return Home.'''
                 logger.warning('Builder Base: %s still not visible after 12s — deploy failed', _t)
                 if frame is not None:
                     self._save_template_miss_snapshot(frame, _t, VisionService.bottom_half_region(frame))
+                self._in_battle = False
+                self.reset_inactivity_timer()
                 continue
             if getattr(self, '_bb_two_star_mode', False):
                 self._bb_two_star_end_battle_and_return_home()
@@ -1153,6 +1174,8 @@ end battle (2-star / gold / elixir / natural) → Return Home.'''
                 self._bb_gold_prioritise_end_battle_and_return_home()
             else:
                 self._bb_end_battle_and_return_home()
+            self._in_battle = False
+            self.reset_inactivity_timer()
             battle_count += 1
             self._maybe_upgrade_bb_walls(upgrade_walls)
             if battle_count % _BB_ELIXIR_CART_COLLECT_EVERY == 0:
@@ -1306,27 +1329,32 @@ exact frame the bot saw, so you can compare it to what the template was cut from
 
     def _deploy_bb_baby_dragons(self, frame):
         '''Find all Baby Dragon icons, deploy on diamond edges, wait, then re-click saved icons.'''
-        strategy = AttackStrategy(self.input, self.vision, self.config, self.stop_event)
-        roi = VisionService.bottom_half_region(frame)
-        _tmpl = getattr(self, '_bb_troop_template', 'babydragon.png')
-        centers = VisionService.find_all_template_centers(frame, _tmpl, region = roi, max_matches = 12, suppress_pad_frac = _BB_TEMPLATE_SUPPRESS_PAD)
-        if not centers:
-            return False
-        deploy_count = len(centers)
-        self.input.click(centers[0][0], centers[0][1], pause = 0.3, rand = False)
-        if self.stop_event.wait(0.2):
-            return True
-        for px, py in strategy._even_diamond_top_perimeter_points(frame, deploy_count, reserve_top_corner_slot = True):
-            self._check_stop()
-            self.input.click(px, py, pause = _EDRAG_DELAY, rand = False)
-        self._deploy_bb_battle_or_flying_machine(strategy)
-        if self._loot_prioritise != 'elixir':
-            if self.stop_event.wait(_BB_BABY_DRAGON_RECLICK_WAIT):
+        self._is_deploying = True
+        try:
+            strategy = AttackStrategy(self.input, self.vision, self.config, self.stop_event)
+            roi = VisionService.bottom_half_region(frame)
+            _tmpl = getattr(self, '_bb_troop_template', 'babydragon.png')
+            centers = VisionService.find_all_template_centers(frame, _tmpl, region = roi, max_matches = 12, suppress_pad_frac = _BB_TEMPLATE_SUPPRESS_PAD)
+            if not centers:
+                return False
+            deploy_count = len(centers)
+            self.input.click(centers[0][0], centers[0][1], pause = 0.3, rand = False)
+            if self.stop_event.wait(0.2):
                 return True
-            for x, y in centers:
+            for px, py in strategy._even_diamond_top_perimeter_points(frame, deploy_count, reserve_top_corner_slot = True):
                 self._check_stop()
-                self.input.click(x, y, pause = 0.15, rand = False)
-        return True
+                self.input.click(px, py, pause = _EDRAG_DELAY, rand = False)
+            self._deploy_bb_battle_or_flying_machine(strategy)
+            if self._loot_prioritise != 'elixir':
+                if self.stop_event.wait(_BB_BABY_DRAGON_RECLICK_WAIT):
+                    return True
+                for x, y in centers:
+                    self._check_stop()
+                    self.input.click(x, y, pause = 0.15, rand = False)
+            return True
+        finally:
+            self._is_deploying = False
+            self.reset_inactivity_timer()
 
     
     def _deploy_bb_battle_or_flying_machine(self, strategy):
@@ -2326,7 +2354,12 @@ old hammer clicks used to leave behind has no Okay at all.'''
         self._update_config_size(frame)
         strategy = self._get_strategy(method_id)
         strategy.event_handler = self._battle_rewards
-        result = strategy.execute(frame, self.stop_event)
+        self._is_deploying = True
+        try:
+            result = strategy.execute(frame, self.stop_event)
+        finally:
+            self._is_deploying = False
+            self.reset_inactivity_timer()
         self._wait_for_battle_end(is_sneaky = method_id == 1)
         return 'troop' if result is False else None
 
