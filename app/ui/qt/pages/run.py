@@ -912,16 +912,29 @@ class RunPage(QWidget):
             return None
 
 
-    def apply_autostart(self, minutes, upgrade_walls, auto_upgrade = 'off'):
-        '''CLI ``--autostart``: Home Village run with the given duration (``0`` =
+    def apply_autostart(self, minutes, upgrade_walls, auto_upgrade = 'off', builder_base = None):
+        '''CLI ``--autostart``: Home Village or Builder Base run with the given duration (``0`` =
         run until maxed), wall toggle, and auto-upgrade mode (off|dry|maxer|rusher).'''
         if self._controller.is_running():
             return None
+        if builder_base is True:
+            bb_btn = self._village_group.button(1)
+            if bb_btn is not None:
+                bb_btn.setChecked(True)
+                self._apply_village_ui()
+        elif builder_base is False:
+            hv_btn = self._village_group.button(0)
+            if hv_btn is not None:
+                hv_btn.setChecked(True)
+                self._apply_village_ui()
         self._star_bonus.setChecked(False)
         self._until_maxed.setChecked(minutes <= 0)
         if minutes > 0:
             self._minutes_spin.setValue(minutes)
-        self._upgrade_walls.setChecked(bool(upgrade_walls))
+        if self._is_builder_base():
+            self._bb_upgrade_walls.setChecked(bool(upgrade_walls))
+        else:
+            self._upgrade_walls.setChecked(bool(upgrade_walls))
         self._set_auto_upgrade_mode(auto_upgrade)
         self.start_bot()
 

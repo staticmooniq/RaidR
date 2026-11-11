@@ -271,9 +271,9 @@ class MainWindow(QMainWindow):
             self._nav_buttons[idx].setChecked(True)
             self._on_tab_changed(idx)
 
-    def autostart_run(self, minutes, upgrade_walls, auto_upgrade='off'):
+    def autostart_run(self, minutes, upgrade_walls, auto_upgrade='off', builder_base=False):
         '''CLI ``--autostart``: configure the Run page and press Start.'''
-        self._run_page.apply_autostart(minutes, upgrade_walls, auto_upgrade)
+        self._run_page.apply_autostart(minutes, upgrade_walls, auto_upgrade, builder_base=builder_base)
 
     def _restore_geometry(self):
         geo = self._settings.value('geometry')

@@ -8,10 +8,11 @@ from app.ui.qt.main_window import MainWindow
 from app.ui.qt.theme import apply_theme
 
 def _parse_autostart(argv):
-    '''``--autostart [--minutes N] [--walls] [--upgrades off|dry|maxer|rusher]`` ->
-    (minutes, walls, upgrades) or None. ``--minutes 0`` = run until maxed (no limit).'''
+    '''``--autostart [--builder-base|--bb] [--minutes N] [--walls] [--upgrades off|dry|maxer|rusher]`` ->
+    (minutes, walls, upgrades, builder_base) or None. ``--minutes 0`` = run until maxed (no limit).'''
     if '--autostart' not in argv:
         return None
+    builder_base = ('--builder-base' in argv or '--bb' in argv)
     minutes = 15
     if '--minutes' in argv:
         try:
@@ -26,7 +27,7 @@ def _parse_autostart(argv):
                 upgrades = candidate
         except IndexError:
             pass
-    return (minutes, '--walls' in argv, upgrades)
+    return (minutes, '--walls' in argv or '--bb-walls' in argv, upgrades, builder_base)
 
 
 def run_gui():
@@ -49,6 +50,6 @@ def run_gui():
     window.show()
     autostart = _parse_autostart(sys.argv[1:])
     if autostart is not None:
-        (minutes, walls, upgrades) = autostart
-        QTimer.singleShot(3000, (lambda : window.autostart_run(minutes, walls, upgrades)))
+        (minutes, walls, upgrades, builder_base) = autostart
+        QTimer.singleShot(3000, (lambda : window.autostart_run(minutes, walls, upgrades, builder_base=builder_base)))
     sys.exit(app.exec())
