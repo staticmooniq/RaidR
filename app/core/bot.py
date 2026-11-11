@@ -1832,14 +1832,14 @@ a red cost button stops the add loop, and a batch nothing can pay for is never c
         return True
 
     
-    def _maybe_upgrade_bb_walls(self, upgrade_walls):
+    def _maybe_upgrade_bb_walls(self, upgrade_walls, force = False):
         '''Builder Base wall upgrades between battles (Modes -> Upgrade walls). Rate-limited:
 a pass costs a panel open/close plus OCR, and nothing here should ever add a pass while a
 builder is mid-upgrade on the other side of the screen.'''
         if not upgrade_walls:
             return None
         now = time.monotonic()
-        if now - getattr(self, '_bb_wall_last_scan', 0) < _BB_WALL_SCAN_INTERVAL_SECONDS:
+        if not force and now - getattr(self, '_bb_wall_last_scan', 0) < _BB_WALL_SCAN_INTERVAL_SECONDS:
             return None
         if not self._should_upgrade_bb_walls():
             self._bb_wall_last_scan = time.monotonic() - _BB_WALL_SCAN_INTERVAL_SECONDS + _BB_WALL_FAILED_RETRY_SECONDS
@@ -1848,29 +1848,57 @@ builder is mid-upgrade on the other side of the screen.'''
         if cb:
             cb('Upgrading Builder Base walls...')
 
-        upgraded = False
+        # Primary and secondary resource order based on loot priority
+        primary_res = 'elixir' if getattr(self, '_loot_prioritise', None) == 'elixir' else 'gold'
+        secondary_res = 'gold' if primary_res == 'elixir' else 'elixir'
+
+        upgraded_any = False
         try:
-            upgraded = self._upgrade_walls_from_build_panel(village = 'builder') is True
+            # Pass 1: Try primary resource (or fallback to whichever is affordable)
+            self._bb_wall_other_resource_affordable = False
+            upgraded_1 = self._upgrade_walls_from_build_panel(village = 'builder', preferred_resource = primary_res) is True
+            if upgraded_1:
+                upgraded_any = True
+                logger.info('Builder Base walls: Pass 1 completed (%s)', primary_res)
+
+            # Pass 2: If both resources were affordable on initial read, upgrade secondary resource too!
+            if getattr(self, '_bb_wall_other_resource_affordable', False):
+                self._check_stop()
+                if self.stop_event.wait(0.6):
+                    return None
+                try:
+                    self._bb_deselect_wall_ui()
+                    self._bb_close_build_panel()
+                except Exception:
+                    pass
+                logger.info('Builder Base walls: Pass 2 starting for %s (both resources available)', secondary_res)
+                upgraded_2 = self._upgrade_walls_from_build_panel(village = 'builder', preferred_resource = secondary_res) is True
+                if upgraded_2:
+                    upgraded_any = True
+                    logger.info('Builder Base walls: Pass 2 completed (%s)', secondary_res)
         except InterruptedError:
             raise
         except Exception:
             logger.warning('Builder Base walls: pass failed; continuing the farm loop', exc_info = True)
-        try:
-            self._bb_deselect_wall_ui()
-            self._bb_close_build_panel()
-        except InterruptedError:
-            raise
-        except Exception:
-            logger.warning('Builder Base walls: cleanup failed; continuing the farm loop', exc_info = True)
+        finally:
+            try:
+                self._bb_deselect_wall_ui()
+                self._bb_close_build_panel()
+            except InterruptedError:
+                raise
+            except Exception:
+                logger.warning('Builder Base walls: cleanup failed; continuing the farm loop', exc_info = True)
+
         now = time.monotonic()
         # Successful batches are rate-limited; failed attempts retry sooner so a transient
         # OCR/template miss does not leave walls untouched for the full interval.
-        self._bb_wall_last_scan = now if upgraded else now - _BB_WALL_SCAN_INTERVAL_SECONDS + _BB_WALL_FAILED_RETRY_SECONDS
-        if upgraded:
+        self._bb_wall_last_scan = now if upgraded_any else now - _BB_WALL_SCAN_INTERVAL_SECONDS + _BB_WALL_FAILED_RETRY_SECONDS
+        if upgraded_any:
             logger.info('Builder Base walls: batch completed')
+        return upgraded_any
 
     
-    def _upgrade_walls_from_build_panel(self, village = 'builder'):
+    def _upgrade_walls_from_build_panel(self, village = 'builder', preferred_resource = None):
         '''New-UI wall upgrade, one algorithm for both villages: Build → scroll the
 right-hand panel to Wall → Upgrade More → add walls while a currency can still pay →
 confirm the batch → Okay.'''
@@ -1980,7 +2008,7 @@ panel rows' own cost icons can never be mistaken for the Upgrade buttons).'''
             return False
         self.input.click(umx, umy, pause = 0.4, rand = False)
         if village == 'builder':
-            return self._bb_wall_batch_sequence()
+            return self._bb_wall_batch_sequence(preferred_resource = preferred_resource)
 
         # Preserve the Home Village batch policy: stop when either resource can no longer pay,
         # then reduce the batch if needed and confirm through the existing Home Village flow.
@@ -2075,19 +2103,53 @@ a price change can never turn a match into a miss.'''
         return (frame, prices)
 
     
-    def _bb_wall_batch_sequence(self, target_walls = 5):
-        """Builder Base wall batch: up to 5 walls per pass."""
+    def _bb_wall_batch_sequence(self, target_walls = 5, preferred_resource = None):
+        """Builder Base wall batch: up to 5 walls per pass, supporting dual resource (Gold + Elixir) passes."""
         added = 0
         (frame, prices) = self._bb_wall_read_prices(attempts = 6)
         if frame is None or prices is None or not prices.found_both:
             logger.warning('Builder Base walls: the two Upgrade prices were not found in the wall bar - stopping without purchase')
             return False
 
+        # Decide which resource this pass is targeting
+        target_res = preferred_resource
+        if target_res == 'gold':
+            if prices.gold_red:
+                if not prices.elixir_red:
+                    logger.info('Builder Base walls: Gold is red but Elixir is affordable — switching to Elixir')
+                    target_res = 'elixir'
+                else:
+                    logger.info('Builder Base walls: Gold is red (not affordable for 1 wall)')
+                    return False
+        elif target_res == 'elixir':
+            if prices.elixir_red:
+                if not prices.gold_red:
+                    logger.info('Builder Base walls: Elixir is red but Gold is affordable — switching to Gold')
+                    target_res = 'gold'
+                else:
+                    logger.info('Builder Base walls: Elixir is red (not affordable for 1 wall)')
+                    return False
+        else:
+            if getattr(self, '_loot_prioritise', None) == 'elixir':
+                target_res = 'elixir' if not prices.elixir_red else ('gold' if not prices.gold_red else None)
+            else:
+                target_res = 'gold' if not prices.gold_red else ('elixir' if not prices.elixir_red else None)
+
+        if not target_res:
+            logger.warning('Builder Base walls: neither resource is affordable for 1 wall - stopping')
+            return False
+
+        # Check if the OTHER resource was ALSO affordable on this initial 1-wall read
+        other_res = 'elixir' if target_res == 'gold' else 'gold'
+        other_affordable = not (prices.elixir_red if other_res == 'elixir' else prices.gold_red)
+        self._bb_wall_other_resource_affordable = other_affordable
+
         # 1 wall is already selected upon entering Upgrade More; add up to target_walls total
         adds_needed = max(0, target_walls - 1)
         for i in range(adds_needed):
             self._check_stop()
-            if prices.both_red:
+            target_red = prices.gold_red if target_res == 'gold' else prices.elixir_red
+            if target_red:
                 break
             add = self._bb_wall_add_center(frame)
             if not add:
@@ -2097,10 +2159,13 @@ a price change can never turn a match into a miss.'''
             added += 1
             (frame, prices) = self._bb_wall_read_prices()
 
-        # If both prices are red, remove walls until affordable
-        while prices and prices.both_red and added > 0:
+        # If target price is red, remove walls until affordable
+        while prices and added > 0:
             self._check_stop()
-            logger.info('Builder Base walls: both prices red; removing one wall')
+            target_red = prices.gold_red if target_res == 'gold' else prices.elixir_red
+            if not target_red:
+                break
+            logger.info('Builder Base walls: %s price red; removing one wall', target_res)
             remove = self._bb_wall_remove_center(frame)
             if not remove:
                 break
@@ -2112,13 +2177,14 @@ a price change can never turn a match into a miss.'''
             logger.warning('Builder Base walls: prices unreadable - stopping without purchase')
             return False
 
-        if prices.both_red:
-            logger.warning('Builder Base walls: cannot afford wall upgrade - stopping without purchase')
+        target_red = prices.gold_red if target_res == 'gold' else prices.elixir_red
+        if target_red:
+            logger.warning('Builder Base walls: cannot afford wall upgrade with %s - stopping without purchase', target_res)
             return False
 
         total_walls = 1 + added
-        logger.info('Builder Base walls: upgrading batch of %d wall(s)', total_walls)
-        return self._bb_wall_pay_and_okay(prices)
+        logger.info('Builder Base walls: upgrading batch of %d wall(s) with %s', total_walls, target_res)
+        return self._bb_wall_pay_and_okay(prices, resource = target_res)
 
     
     def _bb_wall_add_center(self, frame):
@@ -2156,17 +2222,23 @@ control on the same row (measured live at 1288px: 607 -> 398).'''
         return (rx, int(add[1]))
 
     
-    def _bb_wall_pay_and_okay(self, prices):
-        '''Click the Upgrade button whose price is not red, then Okay the "Upgrade Walls" dialog.'''
+    def _bb_wall_pay_and_okay(self, prices, resource = None):
+        '''Click the Upgrade button for the chosen resource, then Okay the "Upgrade Walls" dialog.'''
         picked = None
-        for (center, red) in ((prices.elixir_center, prices.elixir_red), (prices.gold_center, prices.gold_red)):
-            if center and not red:
-                picked = center
-                break
+        if resource == 'gold':
+            picked = prices.gold_center if (prices.gold_center and not prices.gold_red) else None
+        elif resource == 'elixir':
+            picked = prices.elixir_center if (prices.elixir_center and not prices.elixir_red) else None
+        else:
+            for (center, red) in ((prices.gold_center, prices.gold_red), (prices.elixir_center, prices.elixir_red)):
+                if center and not red:
+                    picked = center
+                    break
         if picked is None:
-            logger.info('Builder Base walls: neither price is payable — not opening a purchase')
+            logger.info('Builder Base walls: chosen price is not payable — not opening a purchase')
             return False
-        logger.info('Builder Base walls: paying with %s', 'Builder Elixir' if picked == prices.elixir_center else 'Builder Gold')
+        res_name = 'Builder Gold' if picked == prices.gold_center else 'Builder Elixir'
+        logger.info('Builder Base walls: paying with %s', res_name)
         self.input.click(*picked, pause = _BB_WALL_UPGRADE_CLICK_SECONDS, rand = False)
         (okx, oky) = self._wait_for_image('wallokay.png', timeout = _BB_WALL_OKAY_TIMEOUT_SECONDS, error = False)
         if not okx:

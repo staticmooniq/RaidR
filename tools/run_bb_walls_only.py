@@ -51,7 +51,7 @@ def run_bb_walls(once=False):
             # Check if any leftover dialog is open and clear it
             bot._bb_deselect_wall_ui()
             
-            upgraded = bot._upgrade_walls_from_build_panel(village='builder')
+            upgraded = bot._maybe_upgrade_bb_walls(upgrade_walls=True, force=True)
             logger.info(f"Pass #{pass_num} result: upgraded = {upgraded}")
         except Exception as e:
             logger.error(f"Pass #{pass_num} encountered error: {e}", exc_info=True)
