@@ -5,6 +5,7 @@ All notable changes to the RaidR project are documented in this file.
 ## [1.1] - 2026-11-10
 
 ### Added
+- **Dual-Resource Wall Upgrading (Gold + Elixir):** Builder Base wall upgrader now checks and upgrades 5x walls with Gold, and if Elixir is also available, performs a second pass to upgrade 5x walls with Elixir in the same cycle.
 - **Hero Ability Trigger Timing in Strategy Editor:** Configure each individual hero's ability trigger timing with options for `Random (5–12s)`, `Custom delay (seconds)`, or `Never` (leaves ability for auto-activation or manual use), complete with quick presets (`All Random`, `All 15s`, `All Never`).
 - **Post-Deployment Verification & Recheck Sweep:** The bot now actively re-scans the bottom deployment bar after deploying armies. If any troops, heroes, siege machines, or spells were missed (due to tap lag, frame drops, or red forbidden drop boundaries), the bot selects and deploys them immediately.
 - **Builder Base Multi-Camp & Hero Deployment:** Builder Base attacks now explicitly cycle through each Army Camp slot individually and verify Battle/Flying Machine deployment with multi-threshold fallback, preventing missed camp troops.
