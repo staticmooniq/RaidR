@@ -1390,23 +1390,6 @@ exact frame the bot saw, so you can compare it to what the template was cut from
 
             self._deploy_bb_battle_or_flying_machine(strategy)
 
-            # Builder Base Deploy Bar Recheck: deploy any leftover camps or missed heroes
-            bb_fresh = self.window.screenshot()
-            if bb_fresh is not None:
-                self._update_config_size(bb_fresh)
-                bb_roi = VisionService.bottom_half_region(bb_fresh)
-                for candidate_tmpl in (_tmpl, 'nightwitch.png'):
-                    rem_centers = VisionService.find_all_template_centers(bb_fresh, candidate_tmpl, threshold = 0.68, region = bb_roi, max_matches = 12, suppress_pad_frac = _BB_TEMPLATE_SUPPRESS_PAD)
-                    for rcx, rcy in rem_centers:
-                        self._check_stop()
-                        logger.info('Builder Base recheck: found un-deployed %s at (%d, %d) — deploying', candidate_tmpl, rcx, rcy)
-                        self.input.click(rcx, rcy, pause = 0.2, rand = False)
-                        rpx, rpy = strategy._random_diamond_perimeter_point(bb_fresh)
-                        self.input.click(rpx, rpy, pause = 0.15, rand = False)
-                        self.input.click(rpx, rpy, pause = 0.1, rand = False)
-                # Recheck hero
-                self._deploy_bb_battle_or_flying_machine(strategy)
-
             if self._loot_prioritise != 'elixir':
                 if self.stop_event.wait(_BB_BABY_DRAGON_RECLICK_WAIT):
                     return True
