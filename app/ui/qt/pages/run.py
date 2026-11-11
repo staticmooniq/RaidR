@@ -687,32 +687,8 @@ class RunPage(QWidget):
         self._btn_stop.setEnabled(False)
         self._btn_stop.clicked.connect(self._controller.stop)
         btn_row.addWidget(self._btn_stop)
-        self._btn_launch = neutral_button('🎮 Launch Game', parent = card)
-        self._btn_launch.setMinimumHeight(42)
-        self._btn_launch.setMinimumWidth(140)
-        self._btn_launch.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._btn_launch.setToolTip('Launch Clash of Clans via Google Play Games PC')
-        self._btn_launch.clicked.connect(self._on_launch_game)
-        btn_row.addWidget(self._btn_launch)
         card.card_layout.addLayout(btn_row)
         return card
-
-    def _on_launch_game(self):
-        success, msg = self._controller.launch_game()
-        if success:
-            self._stat_note.setText("🎮 Launching Clash of Clans via Google Play Games...")
-            self._stat_note.setStyleSheet(f"color: {TOKENS.get('primary', '#E11D48')}; font-weight: 600;")
-            QTimer.singleShot(4000, self._check_game_window_after_launch)
-        else:
-            show_error(f"Failed to launch game: {msg}", parent=self)
-
-    def _check_game_window_after_launch(self):
-        if self._controller._bot.window.find_window():
-            self._stat_note.setText("✅ Clash of Clans detected and connected!")
-            self._stat_note.setStyleSheet(f"color: {TOKENS.get('success', '#22C55E')}; font-weight: 600;")
-        else:
-            self._stat_note.setText("⏳ Clash of Clans is loading... (Waiting for game window)")
-            self._stat_note.setStyleSheet(f"color: {TOKENS.get('text_muted', '#8FA0B8')};")
 
     
     def _clear_minutes_selection(self):
