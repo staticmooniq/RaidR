@@ -1385,17 +1385,9 @@ exact frame the bot saw, so you can compare it to what the template was cut from
                     px, py = points[i]
                 else:
                     px, py = strategy._random_diamond_perimeter_point(frame)
-                self.input.click(px, py, pause = _EDRAG_DELAY, rand = False)
-                self.input.click(px, py, pause = 0.1, rand = False)
+                self.input.click(px, py, pause = 0.2, rand = False)
 
             self._deploy_bb_battle_or_flying_machine(strategy)
-
-            if self._loot_prioritise != 'elixir':
-                if self.stop_event.wait(_BB_BABY_DRAGON_RECLICK_WAIT):
-                    return True
-                for x, y in centers:
-                    self._check_stop()
-                    self.input.click(x, y, pause = 0.15, rand = False)
             return True
         finally:
             self._is_deploying = False
@@ -1422,8 +1414,7 @@ exact frame the bot saw, so you can compare it to what the template was cut from
         self.input.click(tx, ty, pause = 0.25, rand = False)
         if self.stop_event.wait(0.15):
             return None
-        self.input.click(px, py, pause = 0.15, rand = False)
-        self.input.click(px, py, pause = _EDRAG_DELAY, rand = False)
+        self.input.click(px, py, pause = 0.25, rand = False)
 
     
     def _bb_end_battle_and_return_home(self):
