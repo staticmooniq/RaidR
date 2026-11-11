@@ -15,6 +15,15 @@ STRATEGY_DEPLOY_PRESETS = [
     ('Single Corner / Side Focus', 'corner_focus'),
 ]
 
+def get_default_hero_abilities() -> Dict[str, Dict[str, Any]]:
+    return {
+        'king': {'mode': 'random', 'seconds': 10},
+        'queen': {'mode': 'random', 'seconds': 10},
+        'warden': {'mode': 'random', 'seconds': 10},
+        'RC': {'mode': 'random', 'seconds': 10},
+        'prince': {'mode': 'random', 'seconds': 10},
+    }
+
 DEFAULT_STRATEGIES = [
     {
         'id': 'valkyries',
@@ -34,6 +43,7 @@ DEFAULT_STRATEGIES = [
         ],
         'deploy_heroes': True,
         'deploy_spells': True,
+        'hero_abilities': get_default_hero_abilities(),
     },
     {
         'id': 'sneaky_goblins',
@@ -53,6 +63,7 @@ DEFAULT_STRATEGIES = [
         ],
         'deploy_heroes': True,
         'deploy_spells': True,
+        'hero_abilities': get_default_hero_abilities(),
     },
     {
         'id': 'super_minions',
@@ -72,6 +83,7 @@ DEFAULT_STRATEGIES = [
         ],
         'deploy_heroes': True,
         'deploy_spells': True,
+        'hero_abilities': get_default_hero_abilities(),
     },
     {
         'id': 'edrags',
@@ -91,6 +103,7 @@ DEFAULT_STRATEGIES = [
         ],
         'deploy_heroes': True,
         'deploy_spells': True,
+        'hero_abilities': get_default_hero_abilities(),
     },
 ]
 
@@ -115,6 +128,10 @@ def load_strategies() -> List[Dict[str, Any]]:
             for b in DEFAULT_STRATEGIES:
                 if b['id'] not in existing_ids:
                     data.insert(0, b)
+            # Ensure hero abilities exist on all strategies
+            for s in data:
+                if 'hero_abilities' not in s or not isinstance(s['hero_abilities'], dict):
+                    s['hero_abilities'] = get_default_hero_abilities()
             return data
     except Exception as e:
         logger.warning('Failed to load custom strategies from %s: %s', path, e)

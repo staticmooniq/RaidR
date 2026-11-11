@@ -111,6 +111,32 @@ class AttackStrategy:
         key = None
 
     
+    def _get_hero_ability_delay(self, hero_name: str) -> Optional[float]:
+        """
+        Calculate ability trigger delay in seconds for a specific hero based on strategy settings.
+        Returns:
+            - float: seconds after deployment to trigger ability
+            - None: never trigger ability
+        """
+        abilities_cfg = {}
+        if hasattr(self, 'strategy_data') and isinstance(self.strategy_data, dict):
+            abilities_cfg = self.strategy_data.get('hero_abilities', {})
+
+        cfg = abilities_cfg.get(hero_name, {})
+        mode = cfg.get('mode', 'random')
+
+        if mode == 'never':
+            logger.info("Hero '%s' ability is set to 'never' — skipping trigger", hero_name)
+            return None
+        elif mode == 'custom':
+            sec = float(cfg.get('seconds', 15))
+            logger.info("Hero '%s' ability scheduled after custom %gs", hero_name, sec)
+            return max(0.5, sec)
+        else: # 'random'
+            delay = random.uniform(_HERO_ABILITY_DELAY_MIN, _HERO_ABILITY_DELAY_MAX)
+            logger.info("Hero '%s' ability scheduled after random %.1fs", hero_name, delay)
+            return delay
+
     def deploy_heroes(self, frame):
         frame, _ = self._reward_checkpoint(frame)
         self._sync_frame_size(frame)
@@ -122,7 +148,8 @@ class AttackStrategy:
             'prince',
             'dragonduke']
         random.shuffle(heroes)
-        deployed_heroes = []
+        if not hasattr(self, '_pending_hero_abilities') or self._pending_hero_abilities is None:
+            self._pending_hero_abilities = []
         roi = self.vision.bottom_half_region(frame)
         (ix, iy) = self.vision.find_template(frame, 'loglauncher.png', threshold = 0.7, region = roi)
         if not ix:
@@ -138,7 +165,7 @@ class AttackStrategy:
                 frame = fresh
                 roi = self.vision.bottom_half_region(frame)
             if interrupted:
-                deployed_heroes = self._relocate_abilities(deployed_heroes, frame)
+                self._pending_hero_abilities = self._relocate_abilities(self._pending_hero_abilities, frame)
             (bx, by) = self.vision.find_template(frame, f'''{hero}.png''', threshold = 0.7, region = roi)
             if not bx:
                 (bx, by) = self.vision.find_template(frame, f'''{hero}.png''', threshold = 0.63, region = roi)
@@ -148,44 +175,70 @@ class AttackStrategy:
             self.input.click(bx, by, pause = 0.2, rand = False)
             self.input.click(deploy_point[0], deploy_point[1], pause = 0.15, rand = False)
             self.input.click(deploy_point[0], deploy_point[1], pause = 0.15, rand = False)
-            # Remember the live, deployed appearance only for relocation after
-            # a reward shifts the bar. Normal ability clicks retain main's slots.
-            live = self.input.window_service.screenshot() if self.event_handler else frame
-            radius = max(8, round(frame.shape[0]*.025))
-            tile = None
-            if live is not None and bx >= radius and by >= radius:
-                tile = live[by-radius:by+radius, bx-radius:bx+radius].copy()
-            # Ability delay: don't click this hero's ability until 5-8s (randomized
-            # per hero) after it lands.
-            ability_ready_at = time.time() + random.uniform(_HERO_ABILITY_DELAY_MIN, _HERO_ABILITY_DELAY_MAX)
-            deployed_heroes.append((bx, by, tile, ability_ready_at))
+
+            # Determine ability trigger timing based on hero strategy configuration
+            delay = self._get_hero_ability_delay(hero)
+            if delay is not None:
+                live = self.input.window_service.screenshot() if self.event_handler else frame
+                radius = max(8, round(frame.shape[0]*.025))
+                tile = None
+                if live is not None and bx >= radius and by >= radius:
+                    tile = live[by-radius:by+radius, bx-radius:bx+radius].copy()
+                ability_ready_at = time.time() + delay
+                self._pending_hero_abilities.append((hero, bx, by, tile, ability_ready_at))
+
             # Refresh frame for next hero scan to prevent using displaced coordinates
             fresh_scr = self.input.window_service.screenshot()
             if fresh_scr is not None:
                 frame = fresh_scr
                 roi = self.vision.bottom_half_region(frame)
-        while deployed_heroes:
+
+    def trigger_pending_abilities(self, stop_event=None):
+        """Wait for and click scheduled hero abilities as their countdown expires."""
+        ev = stop_event or self.stop_event
+        if not getattr(self, '_pending_hero_abilities', None):
+            return
+
+        # Sort so the earliest scheduled ability triggers first
+        self._pending_hero_abilities.sort(key=lambda item: item[4])
+
+        while self._pending_hero_abilities:
+            if ev and ev.is_set():
+                return
             fresh, interrupted = self._reward_checkpoint()
             if interrupted:
-                deployed_heroes = self._relocate_abilities(deployed_heroes, fresh)
-            if not deployed_heroes:
+                self._pending_hero_abilities = self._relocate_abilities(self._pending_hero_abilities, fresh)
+            if not self._pending_hero_abilities:
                 break
-            hx, hy, _, ability_ready_at = deployed_heroes.pop(0)
+
+            hero_name, hx, hy, _, ability_ready_at = self._pending_hero_abilities.pop(0)
             wait_s = ability_ready_at - time.time()
             while wait_s > 0:
                 chunk = min(wait_s, 0.5)
-                if self.stop_event:
-                    if self.stop_event.wait(chunk):
+                if ev:
+                    if ev.wait(chunk):
                         return
                 else:
                     time.sleep(chunk)
                 wait_s -= chunk
-            self.input.click(hx, hy, pause = 0.2)
-            logger.info('Hero ability clicked at %d,%d', hx, hy)
-            if self.stop_event:
-                self.stop_event.wait(random.uniform(0.1, 0.2))
-                continue
-            time.sleep(random.uniform(0.1, 0.2))
+
+                # Early check if battle ended while waiting
+                if wait_s > 1.5:
+                    cur_f = self.input.window_service.screenshot()
+                    if cur_f is not None:
+                        roi = self.vision.bottom_half_region(cur_f)
+                        (ox, oy) = self.vision.find_template(cur_f, 'okay.png', region=roi)
+                        if ox:
+                            logger.info("Battle completed before hero '%s' ability countdown — exiting", hero_name)
+                            self._pending_hero_abilities.clear()
+                            return
+
+            self.input.click(hx, hy, pause = 0.2, rand = False)
+            logger.info("Hero '%s' ability clicked at (%d, %d)", hero_name, hx, hy)
+            if ev:
+                ev.wait(random.uniform(0.1, 0.2))
+            else:
+                time.sleep(random.uniform(0.1, 0.2))
 
     def _relocate_abilities(self, heroes, frame):
         """Match cached live portraits only when an event actually moved slots."""
@@ -194,15 +247,15 @@ class AttackStrategy:
         top = frame.shape[0]//2
         roi = cv2.cvtColor(frame[top:], cv2.COLOR_BGR2GRAY)
         relocated = []
-        for x, y, tile, ability_ready_at in heroes:
+        for hero_name, x, y, tile, ability_ready_at in heroes:
             if tile is None or not tile.size:
                 continue
             gray = cv2.cvtColor(tile, cv2.COLOR_BGR2GRAY)
             _, score, _, loc = cv2.minMaxLoc(cv2.matchTemplate(roi, gray, cv2.TM_CCOEFF_NORMED))
             if score >= .65:
-                relocated.append((loc[0]+tile.shape[1]//2, top+loc[1]+tile.shape[0]//2, tile, ability_ready_at))
+                relocated.append((hero_name, loc[0]+tile.shape[1]//2, top+loc[1]+tile.shape[0]//2, tile, ability_ready_at))
             else:
-                logger.info('Hero no longer recognizable after reward; skipping stale slot')
+                logger.info("Hero '%s' no longer recognizable after reward; skipping stale slot", hero_name)
         return relocated
 
     
@@ -709,6 +762,12 @@ slot nearest the top vertex is left empty (virtual troop at the apex).
                     dp = self._get_hero_deploy_point(frame)
                     self.input.click(dp[0], dp[1], pause=0.15, rand=False)
                     self.input.click(dp[0], dp[1], pause=0.2, rand=False)
+                    delay = self._get_hero_ability_delay(hero)
+                    if delay is not None:
+                        ability_ready_at = time.time() + delay
+                        if not hasattr(self, '_pending_hero_abilities') or self._pending_hero_abilities is None:
+                            self._pending_hero_abilities = []
+                        self._pending_hero_abilities.append((hero, hx, hy, None, ability_ready_at))
                     fresh = self.input.window_service.screenshot()
                     if fresh is not None:
                         frame = fresh
@@ -727,6 +786,12 @@ slot nearest the top vertex is left empty (virtual troop at the apex).
                     dp = self._get_hero_deploy_point(frame)
                     self.input.click(dp[0], dp[1], pause=0.15, rand=False)
                     self.input.click(dp[0], dp[1], pause=0.2, rand=False)
+                    delay = self._get_hero_ability_delay(hero)
+                    if delay is not None:
+                        ability_ready_at = time.time() + delay
+                        if not hasattr(self, '_pending_hero_abilities') or self._pending_hero_abilities is None:
+                            self._pending_hero_abilities = []
+                        self._pending_hero_abilities.append((hero, hx, hy, None, ability_ready_at))
                     fresh = self.input.window_service.screenshot()
                     if fresh is not None:
                         frame = fresh
@@ -854,6 +919,7 @@ class TroopSpamStrategy(AttackStrategy):
                     self._sync_frame_size(frame)
                     self.deploy_spells(frame)
             self.recheck_and_deploy_remaining(ev)
+            self.trigger_pending_abilities(ev)
             return True
 
         # Original drag deploy (runs when deploy_zones.json doesn't exist).
@@ -924,6 +990,7 @@ class TroopSpamStrategy(AttackStrategy):
                     self._sync_frame_size(frame)
                     self.deploy_spells(frame)
             self.recheck_and_deploy_remaining(ev)
+            self.trigger_pending_abilities(ev)
             return True
         finally:
             self.input.mouse_up(curr_x, curr_y)
@@ -973,6 +1040,7 @@ class EdragStrategy(AttackStrategy):
                 self._sync_frame_size(frame)
                 self.deploy_spells(frame)
         self.recheck_and_deploy_remaining(ev)
+        self.trigger_pending_abilities(ev)
         return True
 
 
@@ -1164,4 +1232,5 @@ class CustomArmyStrategy(AttackStrategy):
                 self.deploy_spells(frame)
 
         self.recheck_and_deploy_remaining(ev)
+        self.trigger_pending_abilities(ev)
         return True
