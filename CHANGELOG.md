@@ -2,6 +2,18 @@
 
 All notable changes to the RaidR project are documented in this file.
 
+## [1.2] - 2026-11-11
+
+### Added
+- **Universal Depleted Card Filter:** Real-time color channel divergence filter ignores exhausted `x0` cards (troops, spells, knocked-out heroes) across all attack strategies to prevent post-deploy button spamming.
+- **Hero Ability Timing in Strategy Editor:** Configure individual hero abilities to trigger `Never`, `Random (5–12s)`, or custom seconds after deployment.
+- **Dual-Resource Wall Upgrading:** Builder Base checks wall prices and upgrades with both Gold and Elixir every 5 battles.
+- **Automated Loot Cart Collection:** Collects Builder Base elixir loot cart every 8 battles with multi-threshold recognition and camera settling.
+- **4-Second Build Button Detection:** Dedicated 4-second wait for the Build button after battle ends to ensure the Builder Base screen settles before opening the build panel.
+- **Clean Single-Tap Builder Base Deploy:** Eliminated accidental duplicate clicks and removed post-deploy camp re-clicks.
+
+---
+
 ## [1.1] - 2026-11-10
 
 ### Added

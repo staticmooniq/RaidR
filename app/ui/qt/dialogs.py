@@ -108,7 +108,17 @@ class ChangelogDialog(QDialog):
     def _get_changelog_html(self) -> str:
         return f"""
         <div style='font-family: sans-serif; font-size: 12px; line-height: 1.6; color: {TOKENS.get('text', '#E2E8F0')};'>
-            <h3 style='color: {TOKENS.get('primary', '#E11D48')}; margin-bottom: 4px;'>Version 1.1 (Current)</h3>
+            <h3 style='color: {TOKENS.get('primary', '#E11D48')}; margin-bottom: 4px;'>Version 1.2 (Current)</h3>
+            <ul>
+                <li><b>Universal Depleted Card Filter:</b> Color-divergence analysis instantly distinguishes active cards from depleted <code>x0</code> cards and knocked-out heroes, preventing post-deploy button spam.</li>
+                <li><b>Custom Hero Ability Timing:</b> Set each hero's ability trigger to Never, Random (5-12s), or custom delay in seconds.</li>
+                <li><b>Dual-Resource Wall Upgrading (Gold + Elixir):</b> Builder Base automatically checks and upgrades walls with both Gold and Elixir every 5 battles.</li>
+                <li><b>Automatic Loot Cart Collection:</b> Guaranteed Builder Base elixir cart collection every 8 battles with multi-threshold recognition and camera settling.</li>
+                <li><b>4-Second Build Button Detection:</b> Automatically allows the village screen to settle before wall upgrades, dismissing any leftover return-home popups.</li>
+                <li><b>Single-Tap Builder Base Deploy:</b> Eliminated duplicate clicks in Builder Base deployment.</li>
+            </ul>
+
+            <h3 style='color: {TOKENS.get('text_muted', '#8FA0B8')}; margin-bottom: 4px; margin-top: 14px;'>Version 1.1</h3>
             <ul>
                 <li><b>Deployment Bar Recheck & Verification:</b> Automatic verification pass after deploying troops and heroes; re-scans the bar to immediately catch and deploy any leftover troops, heroes, siege machines, or spells.</li>
                 <li><b>Builder Base Multi-Camp & Hero Deployment:</b> Deploys all Builder Base army camps individually and guarantees Battle Machine/Flying Machine deployment with multi-threshold fallback.</li>
