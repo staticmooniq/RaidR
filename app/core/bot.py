@@ -35,6 +35,7 @@ _BB_CAMERA_LOOKS = (1, 2, 2, 3)  # how many off-centre "looks" to do (picked at 
 _BB_CAMERA_ZOOM_IN = (2, 5)      # wheel notches per look
 _BB_CAMERA_OUT_MARGIN = 3        # extra zoom-out notches so the view always ends fully zoomed out
 _BB_ELIXIR_CART_COLLECT_EVERY = 10
+_BB_WALLS_CHECK_EVERY_BATTLES = 5
 _BB_FULL_ELIXIR_CART_TEMPLATES = ('fullecart.png', 'fullecart2.png', 'fullecart3.png')
 _BB_COLLECT_TEMPLATE = 'collect.png'
 _BB_STAR_BONUS_TEMPLATE = 'bstar.png'
@@ -1085,12 +1086,14 @@ end battle (2-star / gold / elixir / natural) → Return Home.'''
                 cb(msg)
             return None
         battle_count = 0
+        # If starting with full storages, check walls once right at the beginning before entering battles
+        if upgrade_walls:
+            logger.info('Builder Base: initial check for wall upgrades before battle loop')
+            (ax, _) = self._wait_for_image('attack.png', timeout = 10, error = False)
+            self._maybe_upgrade_bb_walls(upgrade_walls, force = True)
+
         while time.time() - start_time < duration_seconds:
             self._check_stop()
-            # Spend Builder Gold / Builder Elixir on walls between battles too, not only after
-            # one: a battle that ended in surrender or a run that starts with full storages
-            # would otherwise sit on loot until the next battle had already happened.
-            self._maybe_upgrade_bb_walls(upgrade_walls)
             self.input.scroll(*self._scroll_point(), 20)
             if self.stop_event.wait(random.uniform(0.1, 0.25)):
                 return None
@@ -1177,7 +1180,13 @@ end battle (2-star / gold / elixir / natural) → Return Home.'''
             self._in_battle = False
             self.reset_inactivity_timer()
             battle_count += 1
-            self._maybe_upgrade_bb_walls(upgrade_walls)
+            if battle_count % _BB_WALLS_CHECK_EVERY_BATTLES == 0:
+                logger.info('Builder Base: battle %d — checking wall upgrades', battle_count)
+                # Ensure village screen has settled after the battle return-home transition
+                (ax, _) = self._wait_for_image('attack.png', timeout = 12, error = False)
+                if not ax:
+                    (bx, _) = self._wait_for_image('buildbtn.png', timeout = 6, error = False)
+                self._maybe_upgrade_bb_walls(upgrade_walls, force = True)
             if battle_count % _BB_ELIXIR_CART_COLLECT_EVERY == 0:
                 logger.info('Builder Base: battle %d — collecting elixir cart', battle_count)
                 self._bb_collect_elixir_cart_after_attack()
@@ -1864,7 +1873,7 @@ builder is mid-upgrade on the other side of the screen.'''
             # Pass 2: If both resources were affordable on initial read, upgrade secondary resource too!
             if getattr(self, '_bb_wall_other_resource_affordable', False):
                 self._check_stop()
-                if self.stop_event.wait(0.6):
+                if self.stop_event.wait(1.5):
                     return None
                 try:
                     self._bb_deselect_wall_ui()
@@ -1910,42 +1919,41 @@ panel rows' own cost icons can never be mistaken for the Upgrade buttons).'''
             # the currency-icon anchors first and falls back to this reader.
             return VisionService.upgrade_cost_redness_by_resource_icons(frame, region = self._bb_wall_action_region(frame))
 
-        frame = self.window.screenshot()
-        if frame is None:
-            return None
-        self._update_config_size(frame)
-        # A previous failed pass can leave the single-wall "Upgrade to level N?" dialog
-        # open on its own; its red X is the always-active dismiss, so clear it before the
-        # Build button can be found underneath.
-        (dx, dy) = self.vision.find_template(frame, 'bbdialogclose.png', threshold = 0.85)
-        if dx:
-            logger.info('Wall upgrade: closing a leftover upgrade dialog first')
-            self.input.click(dx, dy, pause = 0.4, rand = False)
-            if self.stop_event.wait(0.5):
-                return None
+        bx, by = None, None
+        deadline = time.monotonic() + 6.0
+        while time.monotonic() < deadline:
+            self._check_stop()
             frame = self.window.screenshot()
             if frame is None:
-                return None
+                if self.stop_event.wait(0.3):
+                    return None
+                continue
             self._update_config_size(frame)
-        bot_roi = VisionService.bottom_half_region(frame)
-        (bx, by) = self.vision.find_template(frame, 'buildbtn.png', threshold = 0.8, region = bot_roi)
-        if not bx:
-            # A previous interrupted pass may have left the Build panel open. In that case
-            # verify its close control before treating the missing button as a skip.
+            # A previous failed pass can leave the single-wall "Upgrade to level N?" dialog
+            # open on its own; its red X is the always-active dismiss, so clear it first.
+            (dx, dy) = self.vision.find_template(frame, 'bbdialogclose.png', threshold = 0.85)
+            if dx:
+                logger.info('Wall upgrade: closing a leftover upgrade dialog first')
+                self.input.click(dx, dy, pause = 0.4, rand = False)
+                if self.stop_event.wait(0.4):
+                    return None
+                continue
+            bot_roi = VisionService.bottom_half_region(frame)
+            (bx, by) = self.vision.find_template(frame, 'buildbtn.png', threshold = 0.8, region = bot_roi)
+            if bx:
+                break
+            # A previous interrupted pass may have left the Build panel open.
             (cx, cy) = self.vision.find_template(frame, 'bbpanelclose.png', threshold = 0.8)
             if cx:
                 self.input.click(cx, cy, pause = 0.4)
-                if self.stop_event.wait(0.4):
+                if self.stop_event.wait(0.3):
                     return False
-                frame = self.window.screenshot()
-                if frame is None:
-                    return False
-                self._update_config_size(frame)
-                bot_roi = VisionService.bottom_half_region(frame)
-                (bx, by) = self.vision.find_template(frame, 'buildbtn.png', threshold = 0.8, region = bot_roi)
-            if not bx:
-                logger.info('Wall upgrade: Build button not found — skipping this pass')
-                return False
+                continue
+            if self.stop_event.wait(0.4):
+                return None
+        if not bx:
+            logger.info('Wall upgrade: Build button not found — skipping this pass')
+            return False
         self.input.click(bx, by, pause = 0.5, rand = False)
         if self.stop_event.wait(0.5):
             return None
