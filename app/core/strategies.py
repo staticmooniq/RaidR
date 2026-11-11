@@ -3,6 +3,7 @@ import time
 import random
 import json
 import cv2
+import numpy as np
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
 from app.services.input import InputService
@@ -60,6 +61,8 @@ class AttackStrategy:
             'top',
             'right',
             'bottom']
+        self._deployed_heroes = set()
+        self._siege_deployed = False
 
     
     def execute(self, frame, stop_event = None):
@@ -96,7 +99,7 @@ class AttackStrategy:
             if selected:
                 roi = self.vision.bottom_half_region(frame)
                 x, y = self.vision.find_template(frame, selected, region=roi, scale_template=selected_scale_template)
-                if x is None:
+                if x is None or self._is_card_greyed_out(frame, x, y):
                     return None, True  # The previously selected troop is exhausted.
                 self.input.click(x, y, pause=0.2, rand=False)
         return frame, handled
@@ -150,15 +153,19 @@ class AttackStrategy:
         random.shuffle(heroes)
         if not hasattr(self, '_pending_hero_abilities') or self._pending_hero_abilities is None:
             self._pending_hero_abilities = []
+        if not hasattr(self, '_deployed_heroes') or self._deployed_heroes is None:
+            self._deployed_heroes = set()
+        self._siege_deployed = False
         roi = self.vision.bottom_half_region(frame)
         (ix, iy) = self.vision.find_template(frame, 'loglauncher.png', threshold = 0.7, region = roi)
         if not ix:
             (ix, iy) = self.vision.find_template(frame, 'siegebarracks.png', threshold = 0.7, region = roi)
-        if ix:
+        if ix and not self._is_card_greyed_out(frame, ix, iy):
             deploy_point = self._get_hero_deploy_point(frame)
             self.input.click(ix, iy, pause = 0.2, rand = False)
             self.input.click(deploy_point[0], deploy_point[1], pause = 0.15, rand = False)
             self.input.click(deploy_point[0], deploy_point[1], pause = 0.2, rand = False)
+            self._siege_deployed = True
         for hero in heroes:
             fresh, interrupted = self._reward_checkpoint()
             if fresh is not None:
@@ -171,10 +178,13 @@ class AttackStrategy:
                 (bx, by) = self.vision.find_template(frame, f'''{hero}.png''', threshold = 0.63, region = roi)
             if not bx:
                 continue
+            if self._is_card_greyed_out(frame, bx, by):
+                continue
             deploy_point = self._get_hero_deploy_point(frame)
             self.input.click(bx, by, pause = 0.2, rand = False)
             self.input.click(deploy_point[0], deploy_point[1], pause = 0.15, rand = False)
             self.input.click(deploy_point[0], deploy_point[1], pause = 0.15, rand = False)
+            self._deployed_heroes.add(hero)
 
             # Determine ability trigger timing based on hero strategy configuration
             delay = self._get_hero_ability_delay(hero)
@@ -232,6 +242,12 @@ class AttackStrategy:
                             logger.info("Battle completed before hero '%s' ability countdown — exiting", hero_name)
                             self._pending_hero_abilities.clear()
                             return
+
+            # If hero is already greyed out (ability auto-activated or hero knocked out), do not spam click
+            chk_frame = self.input.window_service.screenshot()
+            if chk_frame is not None and self._is_card_greyed_out(chk_frame, hx, hy):
+                logger.info("Hero '%s' at (%d, %d) is already greyed out (ability triggered or knocked out) — skipping", hero_name, hx, hy)
+                continue
 
             self.input.click(hx, hy, pause = 0.2, rand = False)
             logger.info("Hero '%s' ability clicked at (%d, %d)", hero_name, hx, hy)
@@ -576,7 +592,7 @@ slot nearest the top vertex is left empty (virtual troop at the apex).
         frame, _ = self._reward_checkpoint(frame)
         roi = self.vision.bottom_half_region(frame)
         (tx, ty) = self.vision.find_template(frame, template_name, region = roi)
-        if tx is None:
+        if tx is None or self._is_card_greyed_out(frame, tx, ty):
             return False
         self.input.click(tx, ty, pause = 0.3, rand = False)
         if ev and ev.wait(0.2):
@@ -615,8 +631,8 @@ slot nearest the top vertex is left empty (virtual troop at the apex).
         self._sync_frame_size(frame)
         roi = self.vision.bottom_half_region(frame)
         tx, ty = self.vision.find_template(frame, template_path, region=roi, scale_template=False)
-        if tx is None:
-            logger.warning('Secondary troop image did not match an icon on the troop bar; skipping')
+        if tx is None or self._is_card_greyed_out(frame, tx, ty):
+            logger.warning('Secondary troop image did not match an active icon on the troop bar; skipping')
             return False
         self.input.click(tx, ty, pause=0.2, rand=False)
         for _ in range(count):
@@ -638,7 +654,7 @@ slot nearest the top vertex is left empty (virtual troop at the apex).
         self._sync_frame_size(frame)
         roi = self.vision.bottom_half_region(frame)
         (bx, by) = self.vision.find_template(frame, 'earthquake.png', region = roi)
-        if bx:  # [recovered: decompiler turned `if` into `while`, causing endless earthquake spam after spells ran out]
+        if bx and not self._is_card_greyed_out(frame, bx, by):  # [recovered: decompiler turned `if` into `while`, causing endless earthquake spam after spells ran out]
             self.input.click(bx, by, pause = 0.2)
             offset = int(self.config.get_scaled('earthquake', 400))
             ltr = self._earthquake_anchor_triplet(self._scaled_deployment_data(), offset)
@@ -671,16 +687,59 @@ slot nearest the top vertex is left empty (virtual troop at the apex).
                     time.sleep(delay)
         return None
 
-    def _find_troop_template(self, frame, template_name, is_custom=False, region=None):
-        """Find troop template on the deploy bar using multi-threshold fallback."""
+    @staticmethod
+    def _is_card_greyed_out(frame, cx, cy, radius = None):
+        '''Check if the card on the deploy bar centered at (cx, cy) is greyed out / depleted (x0).
+        
+        In Clash of Clans, active troops, spells, and heroes have rich, saturated colors
+        (e.g. electric blue edrags, bright purple rage, yellow/orange valkyries/earthquake),
+        whereas depleted/used cards are heavily desaturated by the game engine's grayscale
+        shader (B ~= G ~= R) with an 'x0' indicator.
+        '''
+        if frame is None or frame.size == 0 or cx is None or cy is None:
+            return False
+        (fh, fw) = frame.shape[:2]
+        r = radius if radius is not None else max(16, int(fh * 0.025))
+        x1 = max(0, int(cx - r))
+        x2 = min(fw, int(cx + r))
+        y1 = max(0, int(cy - r))
+        y2 = min(fh, int(cy + r))
+        crop = frame[y1:y2, x1:x2]
+        if crop.size == 0 or crop.shape[0] < 10 or crop.shape[1] < 10:
+            return False
+
+        b, g, r_ch = cv2.split(crop)
+        diff = (np.abs(b.astype(float) - g.astype(float)) + 
+                np.abs(g.astype(float) - r_ch.astype(float)) + 
+                np.abs(r_ch.astype(float) - b.astype(float))) / 3.0
+        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+        sat = hsv[:, :, 1]
+
+        colored_pixels = np.count_nonzero((sat > 45) & (diff > 18))
+        total_pixels = crop.shape[0] * crop.shape[1]
+        colored_frac = colored_pixels / float(total_pixels)
+        mean_diff = float(diff.mean())
+
+        # If less than 20% of pixels have color and mean channel difference is low (< 14),
+        # this card is greyed out / depleted.
+        return bool(colored_frac < 0.20 and mean_diff < 14.0)
+
+    def _find_troop_template(self, frame, template_name, is_custom=False, region=None, check_active=True):
+        """Find troop template on the deploy bar using multi-threshold fallback, rejecting greyed-out / depleted cards."""
         if is_custom:
             for thresh in (0.78, 0.70, 0.62):
                 tx, ty = self.vision.find_template(frame, template_name, threshold=thresh, region=region, scale_template=False)
                 if tx is not None:
+                    if check_active and self._is_card_greyed_out(frame, tx, ty):
+                        logger.debug("Troop '%s' at (%d, %d) is greyed out (x0) — ignoring", template_name, tx, ty)
+                        continue
                     return tx, ty
             for thresh in (0.75, 0.65):
                 tx, ty = self.vision.find_template(frame, template_name, threshold=thresh, region=region, scale_template=True)
                 if tx is not None:
+                    if check_active and self._is_card_greyed_out(frame, tx, ty):
+                        logger.debug("Troop '%s' at (%d, %d) is greyed out (x0) — ignoring", template_name, tx, ty)
+                        continue
                     return tx, ty
             return None, None
         else:
@@ -696,6 +755,9 @@ slot nearest the top vertex is left empty (virtual troop at the apex).
             for thresh in (0.70, 0.63):
                 tx, ty = self.vision.find_template(frame, tmpl_file, threshold=thresh, region=region)
                 if tx is not None:
+                    if check_active and self._is_card_greyed_out(frame, tx, ty):
+                        logger.debug("Troop/spell '%s' at (%d, %d) is greyed out (x0) — ignoring", tmpl_file, tx, ty)
+                        continue
                     return tx, ty
             return None, None
 
@@ -750,37 +812,38 @@ slot nearest the top vertex is left empty (virtual troop at the apex).
             found_any = False
 
             # 1. Recheck Siege Machines
-            sieges = ['loglauncher.png', 'siegebarracks.png']
-            for siege in sieges:
-                if ev and ev.is_set():
-                    return
-                sx, sy = self._find_troop_template(frame, siege, is_custom=False, region=roi)
-                if sx is not None:
-                    found_any = True
-                    logger.info("Deploy bar recheck (pass %d): un-deployed siege '%s' found at (%d, %d)", pass_idx, siege, sx, sy)
-                    self.input.click(sx, sy, pause=0.2, rand=False)
-                    dp = self._get_hero_deploy_point(frame)
-                    self.input.click(dp[0], dp[1], pause=0.15, rand=False)
-                    self.input.click(dp[0], dp[1], pause=0.2, rand=False)
-                    delay = self._get_hero_ability_delay(hero)
-                    if delay is not None:
-                        ability_ready_at = time.time() + delay
-                        if not hasattr(self, '_pending_hero_abilities') or self._pending_hero_abilities is None:
-                            self._pending_hero_abilities = []
-                        self._pending_hero_abilities.append((hero, hx, hy, None, ability_ready_at))
-                    fresh = self.input.window_service.screenshot()
-                    if fresh is not None:
-                        frame = fresh
-                        roi = self.vision.bottom_half_region(frame)
+            if not getattr(self, '_siege_deployed', False):
+                sieges = ['loglauncher.png', 'siegebarracks.png']
+                for siege in sieges:
+                    if ev and ev.is_set():
+                        return
+                    sx, sy = self._find_troop_template(frame, siege, is_custom=False, region=roi)
+                    if sx is not None:
+                        found_any = True
+                        self._siege_deployed = True
+                        logger.info("Deploy bar recheck (pass %d): un-deployed siege '%s' found at (%d, %d)", pass_idx, siege, sx, sy)
+                        self.input.click(sx, sy, pause=0.2, rand=False)
+                        dp = self._get_hero_deploy_point(frame)
+                        self.input.click(dp[0], dp[1], pause=0.15, rand=False)
+                        self.input.click(dp[0], dp[1], pause=0.2, rand=False)
+                        fresh = self.input.window_service.screenshot()
+                        if fresh is not None:
+                            frame = fresh
+                            roi = self.vision.bottom_half_region(frame)
 
-            # 2. Recheck Heroes
+            # 2. Recheck Heroes (never re-deploy heroes that were already deployed!)
+            deployed_heroes = getattr(self, '_deployed_heroes', set())
             heroes = ['queen', 'warden', 'RC', 'king', 'prince', 'dragonduke']
             for hero in heroes:
+                if hero in deployed_heroes:
+                    continue
                 if ev and ev.is_set():
                     return
                 hx, hy = self._find_troop_template(frame, f'{hero}.png', is_custom=False, region=roi)
                 if hx is not None:
                     found_any = True
+                    deployed_heroes.add(hero)
+                    self._deployed_heroes = deployed_heroes
                     logger.info("Deploy bar recheck (pass %d): un-deployed hero '%s' found at (%d, %d) — deploying!", pass_idx, hero, hx, hy)
                     self.input.click(hx, hy, pause=0.2, rand=False)
                     dp = self._get_hero_deploy_point(frame)
@@ -858,8 +921,8 @@ class TroopSpamStrategy(AttackStrategy):
         logger.info(f'''Executing {self.troop_name} strategy''')
         roi = self.vision.bottom_half_region(frame)
         (tx, ty) = self.vision.find_template(frame, f'''{self.troop_name}.png''', region = roi)
-        if tx is None:
-            msg = f'''Troop {self.troop_name} not found!'''
+        if tx is None or self._is_card_greyed_out(frame, tx, ty):
+            msg = f'''Troop {self.troop_name} not found or already deployed!'''
             logger.warning(msg)
             if self.status_callback:
                 self.status_callback(msg)
@@ -1053,26 +1116,11 @@ class CustomArmyStrategy(AttackStrategy):
         self.status_callback = status_callback
 
     def _find_troop_icon(self, frame, troop_conf):
-        """Find the troop icon on the deployment bar with multi-threshold fallback."""
+        """Find active troop icon on the deployment bar with multi-threshold fallback, ignoring depleted cards."""
         roi = self.vision.bottom_half_region(frame)
         template = troop_conf.get('template', '')
         is_custom = troop_conf.get('is_custom_image', False)
-        
-        if is_custom:
-            # 1. First try matching directly at 1:1 scale (perfect for real-time game crops)
-            for thresh in (0.78, 0.70, 0.62):
-                tx, ty = self.vision.find_template(frame, template, threshold=thresh, region=roi, scale_template=False)
-                if tx is not None:
-                    return tx, ty
-            # 2. Fallback with scale template adjustment if resolution changed
-            for thresh in (0.75, 0.65):
-                tx, ty = self.vision.find_template(frame, template, threshold=thresh, region=roi, scale_template=True)
-                if tx is not None:
-                    return tx, ty
-            return None, None
-        else:
-            tmpl_name = template if template.endswith('.png') else f"{template}.png"
-            return self.vision.find_template(frame, tmpl_name, region = roi)
+        return self._find_troop_template(frame, template, is_custom=is_custom, region=roi, check_active=True)
 
     def _deploy_single_troop(self, frame, troop_conf, ev):
         troop_name = troop_conf.get('name', 'Custom Troop')
