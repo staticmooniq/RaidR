@@ -3,7 +3,7 @@ PySide6>=6.11
 opencv-python>=4.12
 numpy>=2.2
 pytesseract>=0.3.13
-pywin32>=306
+pywin32>=306; sys_platform == 'win32'
 
 # Tesseract itself is NOT a pip package: place a Tesseract 5 install (tesseract.exe,
 # its DLLs and tessdata/) in tesseract_bundle/ — see README.
