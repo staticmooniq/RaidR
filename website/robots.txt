@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://staticmooniq.github.io/RaidR/sitemap.xml
+Sitemap: https://raidrbot.github.io/sitemap.xml
