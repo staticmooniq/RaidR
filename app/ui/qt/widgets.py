@@ -2,7 +2,7 @@
 from __future__ import annotations
 from PySide6.QtCore import Qt, QRectF, QSize, QPointF, QPropertyAnimation, QEasingCurve, Property
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPolygonF, QLinearGradient
-from PySide6.QtWidgets import QCheckBox, QFrame, QLabel, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import QCheckBox, QFrame, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QSlider, QWidget
 from app.ui.qt.theme import SPACING, TOKENS
 
 
@@ -260,3 +260,95 @@ class VisibilityToggleButton(QPushButton):
         p.setBrush(QColor(TOKENS['text']))
         p.setPen(Qt.NoPen)
         p.drawEllipse(QRectF(cx - 2.5, cy - 2.5, 5, 5))
+
+
+class SmoothSlider(QSlider):
+    """QSlider that jumps directly to the mouse-click position on the groove and scrolls smoothly."""
+    def __init__(self, orientation = Qt.Orientation.Horizontal, parent = None):
+        super().__init__(orientation, parent)
+        self.setSingleStep(1)
+        self.setPageStep(1)
+        self.setTracking(True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            val = self._value_for_pos(event.position().toPoint().x())
+            self.setValue(val)
+            event.accept()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.MouseButton.LeftButton:
+            val = self._value_for_pos(event.position().toPoint().x())
+            self.setValue(val)
+            event.accept()
+        super().mouseMoveEvent(event)
+
+    def wheelEvent(self, event):
+        delta = event.angleDelta().y()
+        if delta > 0:
+            self.setValue(min(self.maximum(), self.value() + 1))
+        elif delta < 0:
+            self.setValue(max(self.minimum(), self.value() - 1))
+        event.accept()
+
+    def _value_for_pos(self, x: int) -> int:
+        w = max(1, self.width())
+        margin = 7
+        available = max(1, w - 2 * margin)
+        pos = max(0, min(available, x - margin))
+        ratio = pos / float(available)
+        val = self.minimum() + round(ratio * (self.maximum() - self.minimum()))
+        return int(val)
+
+
+class ThemedSliderRow(QWidget):
+    """Compact horizontal slider row with label, smooth QSlider, and dynamic value badge matching active theme."""
+    def __init__(self, label: str = 'Check frequency:', min_val: int = 1, max_val: int = 15, default_val: int = 5, unit: str = 'battles', slider_width: int = 120, parent=None):
+        super().__init__(parent)
+        self._unit = unit
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+
+        self._label = QLabel(label, self)
+        self._label.setStyleSheet(f"color: {TOKENS['text_muted']}; font-size: 11px; font-weight: 500;")
+        layout.addWidget(self._label)
+
+        self._slider = SmoothSlider(Qt.Orientation.Horizontal, self)
+        self._slider.setRange(min_val, max_val)
+        self._slider.setValue(default_val)
+        self._slider.setFixedWidth(slider_width)
+        layout.addWidget(self._slider)
+
+        self._badge = QLabel(self)
+        self._badge.setObjectName('SliderBadge')
+        self._badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._badge.setMinimumWidth(95)
+        self._update_badge(default_val)
+        layout.addWidget(self._badge)
+
+        self._slider.valueChanged.connect(self._on_value_changed)
+
+    def _update_badge(self, val: int):
+        u = self._unit[:-1] if val == 1 and self._unit.endswith('s') else self._unit
+        self._badge.setText(f"Every {val} {u}")
+
+    def _on_value_changed(self, val: int):
+        self._update_badge(val)
+
+    def value(self) -> int:
+        return self._slider.value()
+
+    def setValue(self, val: int):
+        self._slider.setValue(val)
+        self._update_badge(val)
+
+    def setEnabled(self, enabled: bool):
+        super().setEnabled(enabled)
+        self._slider.setEnabled(enabled)
+        self._badge.setEnabled(enabled)
+        self._label.setEnabled(enabled)
+        self._label.setStyleSheet(f"color: {TOKENS['text'] if enabled else TOKENS['text_faint']}; font-size: 11px; font-weight: 500;")
+

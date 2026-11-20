@@ -32,7 +32,7 @@ class BotController(QObject):
     def is_running(self):
         return self._bot_thread is not None and self._bot_thread.is_alive()
 
-    def start(self, *, method, minutes, star_bonus, ranked_fill, upgrade_walls, multi_run_players, builder_base = False, loot_prioritise = 'both', auto_upgrade = 'off', secondary_troop_template = '', secondary_troop_count = 12, three_star_mode = True, rage_spell = False, two_star_mode = False, custom_strategy_data = None):
+    def start(self, *, method, minutes, star_bonus, ranked_fill, upgrade_walls, multi_run_players, builder_base = False, loot_prioritise = 'both', auto_upgrade = 'off', secondary_troop_template = '', secondary_troop_count = 12, three_star_mode = True, rage_spell = False, two_star_mode = False, custom_strategy_data = None, bb_walls_check_every = 5, bb_return_home_failsafe = True, hv_walls_check_every = 5):
         '''`minutes <= 0` = unlimited ("run until maxed") - single Home Village runs only.'''
         if self.is_running():
             return None
@@ -56,6 +56,9 @@ class BotController(QObject):
                 self._bot._three_star_mode = three_star_mode
                 self._bot._rage_spell = rage_spell
                 self._bot._bb_troop_template = 'nightwitch.png' if method == 6 else 'babydragon.png'
+                self._bot._bb_walls_check_every = bb_walls_check_every
+                self._bot._bb_return_home_failsafe = bb_return_home_failsafe
+                self._bot._hv_walls_check_every = hv_walls_check_every
                 self._bot.start(
                     method,
                     minutes,
@@ -82,7 +85,10 @@ class BotController(QObject):
                     secondary_troop_template = secondary_troop_template,
                     secondary_troop_count = secondary_troop_count,
                     two_star_mode = two_star_mode,
-                    custom_strategy_data = custom_strategy_data
+                    custom_strategy_data = custom_strategy_data,
+                    bb_walls_check_every = bb_walls_check_every,
+                    bb_return_home_failsafe = bb_return_home_failsafe,
+                    hv_walls_check_every = hv_walls_check_every,
                 )
             except InterruptedError:
                 logger.info('Bot thread stopped by user')

@@ -1,0 +1,1406 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@font-face {
+    font-family: 'ClashFont';
+    src: url('../assets/Clash_Regular.otf.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* --------------------------------------------------------------------------
+ * 1. DESIGN TOKENS & SYSTEM VARIABLES (UNSLOPPED GRAPHITE RAMP)
+ * -------------------------------------------------------------------------- */
+:root {
+    --web-bg: #080A0D;
+    --web-surface: #0E121B;
+    --web-surface-raised: #141923;
+    --web-border: rgba(255, 255, 255, 0.08);
+    --web-border-light: rgba(255, 255, 255, 0.14);
+    --web-text: #F1F5F9;
+    --web-text-muted: #8E9BAE;
+    --web-accent: #10B981; /* Signature Emerald Matrix for Website Branding */
+    --web-accent-dim: rgba(16, 185, 129, 0.16);
+
+    /* Dynamic Website Accent Tokens (Default: Emerald Matrix) */
+    --accent-primary: #10B981;
+    --accent-glow: rgba(16, 185, 129, 0.35);
+    --accent-btn-bg: linear-gradient(135deg, #059669 0%, #0D9488 100%);
+    --accent-btn-hov: linear-gradient(135deg, #10B981 0%, #14B8A6 100%);
+    --accent-btn-shadow: 0 12px 28px -6px rgba(16, 185, 129, 0.45);
+    --accent-btn-shadow-hov: 0 16px 36px -4px rgba(16, 185, 129, 0.65);
+    --accent-badge-bg: rgba(16, 185, 129, 0.12);
+    --accent-badge-border: rgba(16, 185, 129, 0.35);
+    --accent-badge-text: #6EE7B7;
+    --accent-headline: linear-gradient(135deg, #D1FAE5 0%, #34D399 50%, #2DD4BF 100%);
+    --accent-carousel-bar: linear-gradient(to right, #059669, #34D399);
+}
+
+/* Palette Variations for Website */
+[data-theme-palette="cyber-purple"] {
+    --accent-primary: #A855F7;
+    --accent-glow: rgba(168, 85, 247, 0.35);
+    --accent-btn-bg: linear-gradient(135deg, #9333EA 0%, #4F46E5 100%);
+    --accent-btn-hov: linear-gradient(135deg, #A855F7 0%, #6366F1 100%);
+    --accent-btn-shadow: 0 12px 28px -6px rgba(147, 51, 234, 0.45);
+    --accent-btn-shadow-hov: 0 16px 36px -4px rgba(168, 85, 247, 0.65);
+    --accent-badge-bg: rgba(168, 85, 247, 0.12);
+    --accent-badge-border: rgba(168, 85, 247, 0.3);
+    --accent-badge-text: #D8B4FE;
+    --accent-headline: linear-gradient(135deg, #F3E8FF 0%, #C084FC 50%, #A5B4FC 100%);
+    --accent-carousel-bar: linear-gradient(to right, #A855F7, #6366F1);
+}
+
+/* Palette Variations for Website */
+[data-theme-palette="neon-aurora"] {
+    --accent-primary: #EC4899;
+    --accent-glow: rgba(236, 72, 153, 0.35);
+    --accent-btn-bg: linear-gradient(135deg, #06B6D4 0%, #9333EA 50%, #EC4899 100%);
+    --accent-btn-hov: linear-gradient(135deg, #22D3EE 0%, #A855F7 50%, #F472B6 100%);
+    --accent-btn-shadow: 0 12px 28px -6px rgba(236, 72, 153, 0.45);
+    --accent-btn-shadow-hov: 0 16px 36px -4px rgba(236, 72, 153, 0.65);
+    --accent-badge-bg: rgba(236, 72, 153, 0.12);
+    --accent-badge-border: rgba(236, 72, 153, 0.35);
+    --accent-badge-text: #F472B6;
+    --accent-headline: linear-gradient(135deg, #67E8F9 0%, #C084FC 45%, #F472B6 100%);
+    --accent-carousel-bar: linear-gradient(to right, #06B6D4, #EC4899);
+}
+
+[data-theme-palette="electric-cyan"] {
+    --accent-primary: #38BDF8;
+    --accent-glow: rgba(14, 165, 233, 0.35);
+    --accent-btn-bg: linear-gradient(135deg, #0284C7 0%, #2563EB 100%);
+    --accent-btn-hov: linear-gradient(135deg, #0EA5E9 0%, #3B82F6 100%);
+    --accent-btn-shadow: 0 12px 28px -6px rgba(14, 165, 233, 0.45);
+    --accent-btn-shadow-hov: 0 16px 36px -4px rgba(14, 165, 233, 0.65);
+    --accent-badge-bg: rgba(14, 165, 233, 0.12);
+    --accent-badge-border: rgba(14, 165, 233, 0.35);
+    --accent-badge-text: #7DD3FC;
+    --accent-headline: linear-gradient(135deg, #E0F2FE 0%, #38BDF8 50%, #60A5FA 100%);
+    --accent-carousel-bar: linear-gradient(to right, #0284C7, #38BDF8);
+}
+
+[data-theme-palette="emerald-matrix"] {
+    --accent-primary: #10B981;
+    --accent-glow: rgba(16, 185, 129, 0.35);
+    --accent-btn-bg: linear-gradient(135deg, #059669 0%, #0D9488 100%);
+    --accent-btn-hov: linear-gradient(135deg, #10B981 0%, #14B8A6 100%);
+    --accent-btn-shadow: 0 12px 28px -6px rgba(16, 185, 129, 0.45);
+    --accent-btn-shadow-hov: 0 16px 36px -4px rgba(16, 185, 129, 0.65);
+    --accent-badge-bg: rgba(16, 185, 129, 0.12);
+    --accent-badge-border: rgba(16, 185, 129, 0.35);
+    --accent-badge-text: #6EE7B7;
+    --accent-headline: linear-gradient(135deg, #D1FAE5 0%, #34D399 50%, #2DD4BF 100%);
+    --accent-carousel-bar: linear-gradient(to right, #059669, #34D399);
+}
+
+[data-theme-palette="amber-sunset"] {
+    --accent-primary: #F59E0B;
+    --accent-glow: rgba(245, 158, 11, 0.35);
+    --accent-btn-bg: linear-gradient(135deg, #D97706 0%, #E11D48 100%);
+    --accent-btn-hov: linear-gradient(135deg, #F59E0B 0%, #F43F5E 100%);
+    --accent-btn-shadow: 0 12px 28px -6px rgba(245, 158, 11, 0.45);
+    --accent-btn-shadow-hov: 0 16px 36px -4px rgba(245, 158, 11, 0.65);
+    --accent-badge-bg: rgba(245, 158, 11, 0.12);
+    --accent-badge-border: rgba(245, 158, 11, 0.35);
+    --accent-badge-text: #FDE68A;
+    --accent-headline: linear-gradient(135deg, #FEF3C7 0%, #FB923C 50%, #F43F5E 100%);
+    --accent-carousel-bar: linear-gradient(to right, #F59E0B, #E11D48);
+}
+
+.hero-headline-gradient {
+    background-image: var(--accent-headline);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    transition: background-image 0.4s ease;
+}
+
+.web-theme-accent-btn {
+    background: var(--accent-btn-bg) !important;
+    box-shadow: var(--accent-btn-shadow) !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.web-theme-accent-btn:hover {
+    background: var(--accent-btn-hov) !important;
+    box-shadow: var(--accent-btn-shadow-hov) !important;
+}
+
+.web-theme-badge {
+    background: var(--accent-badge-bg) !important;
+    border-color: var(--accent-badge-border) !important;
+    color: var(--accent-badge-text) !important;
+    transition: all 0.3s ease;
+}
+
+.web-theme-dot.active {
+    outline: 2px solid #FFF;
+    outline-offset: 2px;
+}
+
+/* Virtual Application Theme Tokens (Default: Emerald Green from live app) */
+.virtual-app-root {
+    --app-primary: #10B981;
+    --app-primary-hov: #34D399;
+    --app-primary-pressed: #059669;
+    --app-primary-dim: rgba(16, 185, 129, 0.15);
+    --app-grad-top: #6EE7B7;
+    --app-grad-hi: #34D399;
+    --app-grad-mid: #10B981;
+    --app-grad-low: #059669;
+    --app-border-glow: #A7F3D0;
+    --app-on-primary: #021B11;
+    --app-bg-c1: #0D1714;
+    --app-bg-c2: #12211C;
+    --app-bg-c3: #0E1915;
+    --app-surface: rgba(18, 38, 32, 0.70);
+    --app-surface-hi: rgba(25, 52, 44, 0.82);
+    --app-navbar: rgba(12, 24, 20, 0.95);
+    --app-text: #F1F5F9;
+    --app-text-muted: #8FA0B8;
+    --app-border: rgba(255, 255, 255, 0.08);
+}
+
+/* --------------------------------------------------------------------------
+ * 2. GLOBAL RESET & BASE RULES
+ * -------------------------------------------------------------------------- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    color-scheme: dark;
+}
+
+body {
+    background-color: var(--web-bg);
+    color: var(--web-text);
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
+    line-height: 1.5;
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Monospace & Brand Fonts */
+.font-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-feature-settings: 'tnum' on, 'zero' on;
+}
+
+.font-clash {
+    font-family: 'ClashFont', 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: 0.5px;
+}
+
+/* Custom Minimal Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.32);
+}
+
+/* Ambient Cursor Spotlight (Subtle, Non-Slop) */
+.ambient-spotlight {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, var(--web-accent-dim) 0%, transparent 65%);
+    pointer-events: none;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+    transition: opacity 0.3s ease;
+}
+
+/* Subtle Technical Grid Background */
+.grid-mesh {
+    position: absolute;
+    inset: 0;
+    background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(circle at center 25%, black 0%, transparent 80%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Clean Hairline Cards (No Glowing Blobs) */
+.glass-panel {
+    background: rgba(14, 18, 27, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--web-border);
+    border-radius: 16px;
+    box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.8),
+                inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* --------------------------------------------------------------------------
+ * 3. EXACT RAIDR DESKTOP WINDOW REPLICATION (100% MATCHING SCREENSHOTS)
+ * -------------------------------------------------------------------------- */
+.virtual-app-window {
+    width: 100%;
+    max-width: 980px;
+    margin: 0 auto;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9),
+                0 0 25px var(--app-primary-dim);
+    overflow: hidden;
+    background: linear-gradient(155deg, var(--app-bg-c1) 0%, var(--app-bg-c2) 55%, var(--app-bg-c3) 100%);
+    transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    user-select: none;
+    position: relative;
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+}
+
+/* Native Windows OS Titlebar */
+.os-titlebar {
+    height: 32px;
+    background: #090C10;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 0 10px;
+}
+
+.os-titlebar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #94A3B8;
+}
+
+.os-app-icon {
+    width: 14px;
+    height: 14px;
+    object-contain: fit;
+}
+
+/* Windows Action Controls: Min, Max, Close */
+.os-window-controls {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.os-win-btn {
+    width: 44px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: #94A3B8;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.os-win-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #FFFFFF;
+}
+
+.os-win-close:hover {
+    background: #E81123 !important;
+    color: #FFFFFF !important;
+}
+
+/* --------------------------------------------------------------------------
+ * 4. BOT TOP APPLICATION NAVIGATION BAR
+ * -------------------------------------------------------------------------- */
+.app-navbar {
+    height: 52px;
+    background: var(--app-navbar);
+    border-bottom: 1px solid var(--app-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    gap: 12px;
+    transition: background 0.3s ease;
+}
+
+/* Brand Wordmark */
+.app-brand-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.app-brand-icon-box {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    background: var(--app-primary);
+    color: var(--app-on-primary);
+    font-weight: 800;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+.app-brand-icon-img {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45));
+    transition: transform 0.2s ease;
+}
+
+.app-brand-badge:hover .app-brand-icon-img {
+    transform: scale(1.08) rotate(-4deg);
+}
+
+.app-brand-text {
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    line-height: 1;
+}
+
+.app-brand-raid {
+    color: var(--app-primary);
+    transition: color 0.3s ease;
+}
+
+.app-brand-r {
+    color: #FFFFFF;
+}
+
+/* Navigation Tabs: Run | Settings | Logs */
+.app-nav-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.app-tab-btn {
+    padding: 6px 16px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--app-text-muted);
+    border-radius: 7px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-tab-btn:hover {
+    color: var(--app-text);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.app-tab-btn.active {
+    background: var(--app-primary);
+    color: var(--app-on-primary);
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Navbar Utility Action Buttons */
+.app-header-utilities {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-discord-btn {
+    background: rgba(88, 101, 242, 0.12);
+    color: #E2E8F0;
+    border: 1px solid rgba(88, 101, 242, 0.35);
+    border-radius: 7px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.app-discord-btn:hover {
+    background: rgba(88, 101, 242, 0.3);
+    border-color: rgba(88, 101, 242, 0.6);
+    color: #FFFFFF;
+}
+
+.app-launch-btn {
+    background: rgba(255, 255, 255, 0.04);
+    color: #E2E8F0;
+    border: 1px solid var(--app-border);
+    border-radius: 7px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s ease;
+}
+
+.app-launch-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #FFFFFF;
+}
+
+/* Village Switcher in Navbar: [ Home Village ] [ Builder Base ] */
+.app-navbar-village-group {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--app-border);
+    border-radius: 7px;
+    padding: 2px;
+}
+
+.app-village-btn {
+    padding: 5px 13px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--app-text-muted);
+    border-radius: 5px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.app-village-btn:hover {
+    color: var(--app-text);
+}
+
+.app-village-btn.active {
+    background: var(--app-primary);
+    color: var(--app-on-primary);
+    font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+ * 5. VIEWPORT CONTENT & CARDS (MATCHING QT RUN PAGE)
+ * -------------------------------------------------------------------------- */
+.app-viewport {
+    height: 530px;
+    overflow-y: auto;
+    padding: 18px 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.app-card {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 9px;
+    padding: 14px 18px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.app-card-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--app-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+}
+
+.app-card-desc {
+    font-size: 11.5px;
+    color: var(--app-text-muted);
+    line-height: 1.45;
+}
+
+/* Attack Strategy Row */
+.app-strategy-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.app-strategy-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.app-btn-pill {
+    padding: 7px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--app-text);
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--app-border);
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.app-btn-pill:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.app-btn-pill.active {
+    background: var(--app-primary);
+    color: var(--app-on-primary);
+    border-color: transparent;
+    font-weight: 700;
+}
+
+.app-btn-delete {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #FCA5A5;
+}
+
+.app-btn-delete:hover {
+    background: #EF4444;
+    color: #FFFFFF;
+}
+
+/* Home Village Strategy Dropdown Menu (Matching Screenshot) */
+.hv-strat-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 5px;
+    z-index: 100;
+    min-width: 156px;
+    background: #0E131E;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    animation: fadeIn 0.12s ease;
+}
+
+.hv-strat-dropdown-menu.hidden {
+    display: none !important;
+}
+
+.hv-strat-menu-item {
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #CBD5E1;
+    background: transparent;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: all 0.12s ease;
+}
+
+.hv-strat-menu-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #FFFFFF;
+}
+
+.hv-strat-menu-item.active {
+    background: var(--app-primary);
+    color: var(--app-on-primary);
+    font-weight: 700;
+}
+
+.app-troop-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid var(--app-border);
+    border-radius: 7px;
+    padding: 5px 12px;
+}
+
+.app-troop-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+/* Switch Rows */
+.app-switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.app-switch-row:last-child {
+    border-bottom: none;
+    padding-bottom: 2px;
+}
+
+.app-switch-meta h4 {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--app-text);
+    margin-bottom: 2px;
+}
+
+.app-switch-meta p {
+    font-size: 11px;
+    color: var(--app-text-muted);
+    line-height: 1.4;
+}
+
+/* Custom 60fps Toggle Switch */
+.app-toggle {
+    width: 42px;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s ease;
+}
+
+.app-toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: #CBD5E1;
+    border-radius: 50%;
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), background 0.18s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.app-toggle.active {
+    background: var(--app-primary);
+    border-color: var(--app-primary-hov);
+}
+
+.app-toggle.active::after {
+    transform: translateX(20px);
+    background: #FFFFFF;
+}
+
+/* Duration Stepper Control */
+.app-stepper-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--app-border);
+    border-radius: 6px;
+    padding: 3px 8px;
+}
+
+.app-stepper-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    width: 38px;
+    text-align: center;
+    background: transparent;
+    border: none;
+    color: var(--app-text);
+}
+
+.app-stepper-arrows {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.app-step-btn {
+    width: 14px;
+    height: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--app-text-muted);
+    cursor: pointer;
+    font-size: 8px;
+    line-height: 1;
+}
+
+.app-step-btn:hover {
+    color: #FFFFFF;
+}
+
+/* Custom 60fps Slider Control */
+.app-slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.app-themed-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 130px;
+    height: 5px;
+    border-radius: 999px;
+    background: linear-gradient(to right, var(--app-primary) 0%, var(--app-primary) var(--slider-pct, 33%), rgba(255, 255, 255, 0.14) var(--slider-pct, 33%), rgba(255, 255, 255, 0.14) 100%);
+    outline: none;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.app-themed-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    border: 2px solid var(--app-primary);
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    transition: transform 0.1s ease;
+}
+
+.app-themed-slider::-webkit-slider-thumb:hover,
+.app-themed-slider:active::-webkit-slider-thumb {
+    transform: scale(1.2);
+}
+
+.app-slider-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--app-text);
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--app-border);
+    padding: 3px 8px;
+    border-radius: 5px;
+    white-space: nowrap;
+}
+
+/* Live Status Metric Grid */
+.app-status-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.app-status-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.app-status-cell {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 6px;
+    padding: 7px 10px;
+}
+
+.app-status-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--app-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.app-status-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--app-text);
+}
+
+/* Bottom Controls Bar (Start Bot / Stop Bot) */
+.app-bottom-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+/* Pinned Run Controls Dock */
+.app-run-dock {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 12px 20px;
+    background: var(--app-navbar);
+    border-top: 1px solid var(--app-border);
+    transition: background 0.3s ease;
+}
+
+.app-run-dock.hidden {
+    display: none !important;
+}
+
+.app-btn-start {
+    padding: 12px 20px;
+    font-size: 13.5px;
+    font-weight: 800;
+    background: var(--app-primary);
+    color: var(--app-on-primary);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 14px var(--app-primary-dim);
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-btn-start:hover {
+    background: var(--app-primary-hov);
+    transform: translateY(-1px);
+}
+
+.app-btn-start:active {
+    transform: scale(0.98);
+}
+
+.app-btn-stop {
+    padding: 12px 20px;
+    font-size: 13.5px;
+    font-weight: 700;
+    background: rgba(42, 22, 24, 0.45);
+    color: #7A3E44;
+    border: 1px solid rgba(239, 68, 68, 0.15);
+    border-radius: 8px;
+    cursor: not-allowed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.app-btn-stop.enabled {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #F87171;
+    cursor: pointer;
+}
+
+.app-btn-stop.enabled:hover {
+    background: #EF4444;
+    color: #FFFFFF;
+}
+
+/* Simulated Desktop Window States */
+.virtual-app-window.is-minimized {
+    transform: scale(0.6) translateY(240px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+
+.virtual-app-window.is-maximized {
+    max-width: 100% !important;
+    transition: max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Minimized Floating Taskbar Dock */
+.taskbar-dock {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 999;
+    background: #0B0E14;
+    border: 1px solid var(--app-primary);
+    border-radius: 999px;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.8), 0 0 20px var(--app-primary-dim);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    color: #FFFFFF;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.taskbar-dock:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.9), 0 0 25px var(--app-primary);
+}
+
+.taskbar-dock.hidden {
+    display: none !important;
+}
+
+/* In-App Notification Toast */
+.app-toast {
+    position: absolute;
+    bottom: 44px;
+    right: 16px;
+    z-index: 60;
+    background: #0E131E;
+    border: 1px solid var(--app-primary);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 11.5px;
+    color: #F1F5F9;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.8), 0 0 15px var(--app-primary-dim);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-toast.hidden {
+    opacity: 0;
+    transform: translateY(12px) scale(0.95);
+    pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+ * 8. CLASH OF CLANS IN-GAME MULTI-WALL REPLICA HUD
+ * -------------------------------------------------------------------------- */
+.coc-wall-bar-container {
+    background: #101622;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.coc-wall-preview-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.coc-wall-hud-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: linear-gradient(180deg, #F9F1DE 0%, #D8C3A5 100%);
+    border: 2px solid #5C381E;
+    border-radius: 9px;
+    padding: 8px 10px;
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.8), 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+.coc-hud-btn {
+    background: linear-gradient(180deg, #FFFFFF 0%, #E6D8C3 60%, #D3BEA2 100%);
+    border: 1.5px solid #4F2E18;
+    border-radius: 7px;
+    box-shadow: inset 0 1px 0 #FFFFFF, 0 2px 4px rgba(0, 0, 0, 0.35);
+    padding: 6px 10px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 68px;
+    transition: transform 0.08s ease, filter 0.08s ease;
+    user-select: none;
+}
+
+.coc-hud-btn:hover {
+    filter: brightness(1.05);
+}
+
+.coc-hud-btn:active {
+    transform: translateY(1.5px);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.4);
+}
+
+.coc-hud-upgrade {
+    min-width: 96px;
+}
+
+.coc-hud-wall-icon {
+    font-size: 13px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+
+.coc-hud-price-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 800;
+    color: #1E293B;
+}
+
+.coc-hud-hammers {
+    font-size: 11px;
+    line-height: 1;
+    margin: 1px 0;
+}
+
+.coc-hud-label {
+    font-family: 'ClashFont', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: #2E1A0C;
+    margin-top: 2px;
+    letter-spacing: 0.2px;
+}
+
+.coc-upgrade-banner {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    border-radius: 6px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    animation: fadeIn 0.2s ease;
+}
+
+/* Bottom Native Status Bar */
+.app-footer-bar {
+    height: 28px;
+    background: #090C10;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    font-size: 10.5px;
+    color: #64748B;
+    font-mono: true;
+}
+
+.app-footer-ready {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #94A3B8;
+}
+
+.app-footer-beacon {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--app-primary);
+}
+
+/* --------------------------------------------------------------------------
+ * 6. LOGS PAGE TERMINAL
+ * -------------------------------------------------------------------------- */
+.app-logs-terminal {
+    background: #06080C;
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    padding: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    color: #94A3B8;
+    height: 420px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.log-time { color: #475569; }
+.log-src { color: #64748B; }
+.log-level { color: var(--app-primary); font-weight: 700; }
+.log-msg { color: #E2E8F0; }
+
+/* --------------------------------------------------------------------------
+ * 7. THEMES SELECTOR & PRESETS
+ * -------------------------------------------------------------------------- */
+.app-select {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--app-border);
+    border-radius: 6px;
+    color: var(--app-text);
+    padding: 7px 12px;
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+.app-select:focus {
+    border-color: var(--app-primary);
+}
+
+.theme-chips-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.theme-chip-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--app-border);
+    color: var(--app-text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.theme-chip-btn:hover {
+    color: #FFFFFF;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.theme-chip-btn.active {
+    border-color: var(--app-primary);
+    color: #FFFFFF;
+    background: var(--app-primary-dim);
+}
+
+.theme-chip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+ * 14. 3D PARALLAX REACTIVE FEATURE CARDS (ANTIGRAVITY DEPTH)
+ * -------------------------------------------------------------------------- */
+.features-grid-3d {
+    perspective: 1200px;
+}
+
+.parallax-card-3d {
+    position: relative;
+    background: rgba(14, 18, 27, 0.75);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.8),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transform-style: preserve-3d;
+    transition: transform 0.12s cubic-bezier(0.2, 0, 0.3, 1), 
+                box-shadow 0.35s ease, 
+                border-color 0.35s ease;
+    overflow: hidden;
+    cursor: default;
+    will-change: transform;
+}
+
+/* Dynamic Cursor Spotlight Aura */
+.parallax-card-3d::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+        380px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        var(--accent-glow, rgba(16, 185, 129, 0.22)),
+        transparent 75%
+    );
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.parallax-card-3d:hover {
+    border-color: var(--accent-primary, rgba(16, 185, 129, 0.45));
+    box-shadow: 0 35px 70px -20px rgba(0, 0, 0, 0.95),
+                0 0 35px -8px var(--accent-glow, rgba(16, 185, 129, 0.35)),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.parallax-card-3d:hover::before {
+    opacity: 1;
+}
+
+.card-3d-content {
+    position: relative;
+    z-index: 2;
+    transform-style: preserve-3d;
+}
+
+.card-3d-tag {
+    transform: translateZ(25px);
+    transition: transform 0.2s ease;
+}
+
+.card-3d-title {
+    transform: translateZ(35px);
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.card-3d-desc {
+    transform: translateZ(22px);
+    transition: transform 0.2s ease;
+}
+
+.card-3d-bar {
+    transform: translateZ(18px);
+    transition: width 0.3s ease, opacity 0.3s ease;
+}
+
+.parallax-card-3d:hover .card-3d-bar {
+    width: 2.75rem;
+    opacity: 1;
+}
+
+/* Subtle Idle Floating Breathing Animation (Weightless Feel) */
+@keyframes cardFloat {
+    0% { transform: translateY(0px) rotateX(0deg) rotateY(0deg); }
+    50% { transform: translateY(-7px) rotateX(1deg) rotateY(-1deg); }
+    100% { transform: translateY(0px) rotateX(0deg) rotateY(0deg); }
+}
+
+.card-float-1 { animation: cardFloat 5.5s ease-in-out infinite; animation-delay: 0s; }
+.card-float-2 { animation: cardFloat 6.2s ease-in-out infinite; animation-delay: 0.8s; }
+.card-float-3 { animation: cardFloat 5.8s ease-in-out infinite; animation-delay: 1.6s; }
+.card-float-4 { animation: cardFloat 6.4s ease-in-out infinite; animation-delay: 0.4s; }
+.card-float-5 { animation: cardFloat 5.9s ease-in-out infinite; animation-delay: 1.2s; }
+.card-float-6 { animation: cardFloat 6.1s ease-in-out infinite; animation-delay: 2.0s; }
+
+/* --------------------------------------------------------------------------
+ * 15. INFINITE MOMENTUM CAROUSEL STRIP (DRAG & FLICK 60FPS)
+ * -------------------------------------------------------------------------- */
+.carousel-viewport {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: pan-y;
+}
+
+.carousel-viewport.is-dragging {
+    cursor: grabbing !important;
+}
+
+.carousel-viewport.is-dragging * {
+    cursor: grabbing !important;
+    user-select: none !important;
+}
+
+.carousel-track {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 1.25rem;
+    width: max-content;
+    will-change: transform;
+    transform: translate3d(0, 0, 0);
+}
+
+.carousel-card {
+    flex-shrink: 0;
+    width: 340px;
+    box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+    .carousel-card {
+        width: 380px;
+    }
+}
+
+.carousel-fade-left {
+    background: linear-gradient(to right, #080A0D 0%, rgba(8, 10, 13, 0) 100%);
+}
+
+.carousel-fade-right {
+    background: linear-gradient(to left, #080A0D 0%, rgba(8, 10, 13, 0) 100%);
+}
+
+/* --------------------------------------------------------------------------
+ * 16. MACOS-STYLE BUTTERY MOMENTUM SMOOTH SCROLL (LENIS ENGINE)
+ * -------------------------------------------------------------------------- */
+html.lenis, html.lenis body {
+    height: auto;
+}
+
+.lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+    overflow: hidden;
+}
+
+.lenis.lenis-smooth iframe {
+    pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+ * 17. MOBILE VIEWPORT OVERRIDES
+ * Completely hide the 980px desktop window simulation on phones (< 768px)
+ * -------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+    #simulator,
+    .virtual-app-root,
+    .virtual-app-window,
+    #minimized-taskbar-dock {
+        display: none !important;
+    }
+}
+

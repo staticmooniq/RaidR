@@ -54,13 +54,15 @@ _BB_WALL_REMOVE_TEMPLATE = 'bbwallremove.png'    # "Remove Wall" button in the w
 _BB_WALL_GOLD_TEMPLATE = 'bbwallgold.png'        # Builder Gold coin inside the gold Upgrade button
 _BB_WALL_ELIXIR_TEMPLATE = 'bbwallelixir.png'    # Builder Elixir drop inside the elixir Upgrade button
 _BB_WALL_ADD_CLICK_SECONDS = 0.7                 # settle after each Add Wall tap (cost text redraws)
-_BB_WALL_REMOVE_CLICK_SECONDS = 0.45             # settle after the single Remove Wall tap
+_BB_WALL_REMOVE_CLICK_SECONDS = 0.60             # settle after Remove Wall tap (cost text redraws)
 _BB_WALL_UPGRADE_CLICK_SECONDS = 0.35            # settle before the Upgrade Walls dialog appears
 _BB_WALL_PRICE_READ_SETTLE_SECONDS = 0.35        # between two price reads of the same bar
 _BB_WALL_OKAY_TIMEOUT_SECONDS = 6.0              # Upgrade Walls dialog -> Okay
 _WALL_PRICE_RED_SHARE = 0.2                       # red share of a price box that means "cannot pay"
-_BB_WALL_PANEL_SCROLL_STEPS = 16
+_BB_WALL_PANEL_SCROLL_STEPS = 24
 _BB_WALL_PANEL_WHEEL_CLICKS = 1
+_HV_WALL_PANEL_SCROLL_STEPS = 80
+_HV_WALL_PANEL_WHEEL_CLICKS = 2
 _BB_WALL_BATCH_MAX_ADDS = 24  # Add Wall taps per pass before giving up on both-red (a long stretch of cheap walls)
 _BB_WALL_ANCHOR_THRESHOLD = 0.62  # live window renders the bar icons at 0.72-0.78; 0.75 missed them
 _BB_WALL_REMOVE_OFFSET_FRAC = 0.162  # Add Wall (lime +1) x minus this = Remove Wall x (same bar row)
@@ -110,7 +112,7 @@ class Bot:
         self._suppress_loot_negative_error_once = False
 
     
-    def start(self, method, run_time_minutes, star_bonus = False, status_callback = None, loot_callback = None, multi_run_players = None, ranked_fill = False, upgrade_walls = False, earthquake_method = EARTHQUAKE_METHOD_CURVE, builder_base = False, loot_prioritise = 'both', wall_upgrade_threshold = 0, auto_upgrade = MODE_OFF, reserve_builders = 1, state_callback = None, upgrade_order = None, min_gold = 0, min_elixir = 0, min_dark_elixir = 0, max_next_skips = 50, battle_end_delay = 20, loot_match_condition = 'any', secondary_troop_template = '', secondary_troop_count = 12, two_star_mode = False, custom_strategy_data = None):
+    def start(self, method, run_time_minutes, star_bonus = False, status_callback = None, loot_callback = None, multi_run_players = None, ranked_fill = False, upgrade_walls = False, earthquake_method = EARTHQUAKE_METHOD_CURVE, builder_base = False, loot_prioritise = 'both', wall_upgrade_threshold = 0, auto_upgrade = MODE_OFF, reserve_builders = 1, state_callback = None, upgrade_order = None, min_gold = 0, min_elixir = 0, min_dark_elixir = 0, max_next_skips = 50, battle_end_delay = 20, loot_match_condition = 'any', secondary_troop_template = '', secondary_troop_count = 12, two_star_mode = False, custom_strategy_data = None, **kwargs):
         '''Starts the bot loop. With ``multi_run_players``, runs a full session per enabled player.
         ``run_time_minutes <= 0`` (single Home Village runs only) means UNLIMITED — farm,
         upgrade and idle until the user stops the bot ("run until maxed").'''
@@ -119,6 +121,14 @@ class Bot:
         self._state_callback = state_callback
         self._earthquake_method = earthquake_method
         self._custom_strategy_data = custom_strategy_data
+        if 'bb_walls_check_every' in kwargs:
+            self._bb_walls_check_every = kwargs['bb_walls_check_every']
+        if 'bb_return_home_failsafe' in kwargs:
+            self._bb_return_home_failsafe = kwargs['bb_return_home_failsafe']
+        if 'hv_walls_check_every' in kwargs:
+            self._hv_walls_check_every = kwargs['hv_walls_check_every']
+        else:
+            self._hv_walls_check_every = kwargs.get('wall_check_every', 5)
         if not self.window.find_window():
             raise RuntimeError('Clash of Clans window not found. Please ensure the game is open.')
         self._reset_loot_session()
@@ -137,6 +147,7 @@ class Bot:
         # Pretend the last wall pass ran an interval ago so the very first pass always fires
         # (monotonic() is seconds-since-boot on Windows, so a fresh boot used to skip it).
         self._bb_wall_last_scan = time.monotonic() - _BB_WALL_SCAN_INTERVAL_SECONDS
+        self._hv_wall_last_scan = time.monotonic() - _BB_WALL_SCAN_INTERVAL_SECONDS
         self._reserve_builders = max(0, int(reserve_builders or 0))
         self._upgrade_order = upgrade_order
         self._advisor = None  # one UpgradeAdvisor per session (it holds execution cooldowns)
@@ -445,19 +456,70 @@ deselect, which would eat the upcoming Attack click.'''
         self.input.click(pause = 0.3, *self.config.get_point('empty'))
 
 
-    def _maybe_upgrade_walls(self, upgrade_walls):
-        '''Upgrade walls on home when enabled and loot is high enough (threshold or full storages).'''
-        if not upgrade_walls or not self._should_upgrade_walls():  # [recovered: decompiler dropped the second `not`, so it upgraded only when storages were NOT full]
+    def _maybe_upgrade_walls(self, upgrade_walls, force = False):
+        '''Home Village wall upgrades between battles (Modes -> Upgrade walls). Rate-limited unless forced.'''
+        if not upgrade_walls:
             return None
+        now = time.monotonic()
+        if not force and now - getattr(self, '_hv_wall_last_scan', 0) < _BB_WALL_SCAN_INTERVAL_SECONDS:
+            return None
+
+        # Look for 4 brief seconds for the build button before attempting wall upgrades
+        bx, by = self._bb_wait_for_build_button(timeout = 4.0)
+        if not bx:
+            logger.info('Home Village walls: Build button not visible within 4s — village not settled, skipping this pass')
+            return None
+
         cb = getattr(self, '_status_callback', None)
         if cb:
-            cb('Upgrading walls...')
-        self._loot_snapshot_before_attack()
-        for _ in range(2):
-            self._check_stop()
-            self._upgrade_walls()
-            self._deselect_wall_ui()
-        self._suppress_loot_negative_error_once = True
+            cb('Upgrading Home Village walls...')
+
+        # Primary: Elixir (to save Gold for attack search fee); Secondary: Gold
+        primary_res = 'elixir'
+        secondary_res = 'gold'
+
+        upgraded_any = False
+        try:
+            # Pass 1: Try primary resource (Elixir, or fallback to Gold if Elixir not affordable)
+            self._bb_wall_other_resource_affordable = False
+            upgraded_1 = self._upgrade_walls_from_build_panel(village = 'home', preferred_resource = primary_res) is True
+            if upgraded_1:
+                upgraded_any = True
+                logger.info('Home Village walls: Pass 1 completed (%s)', primary_res)
+
+            # Pass 2: If both resources were affordable on initial read, upgrade secondary resource too!
+            if getattr(self, '_bb_wall_other_resource_affordable', False):
+                self._check_stop()
+                if self.stop_event.wait(1.5):
+                    return None
+                try:
+                    self._bb_deselect_wall_ui()
+                    self._bb_close_build_panel()
+                except Exception:
+                    pass
+                logger.info('Home Village walls: Pass 2 starting for %s (both resources available)', secondary_res)
+                upgraded_2 = self._upgrade_walls_from_build_panel(village = 'home', preferred_resource = secondary_res) is True
+                if upgraded_2:
+                    upgraded_any = True
+                    logger.info('Home Village walls: Pass 2 completed (%s)', secondary_res)
+        except InterruptedError:
+            raise
+        except Exception:
+            logger.warning('Home Village walls: pass failed; continuing the farm loop', exc_info = True)
+        finally:
+            try:
+                self._bb_deselect_wall_ui()
+                self._bb_close_build_panel()
+            except InterruptedError:
+                raise
+            except Exception:
+                logger.warning('Home Village walls: cleanup failed; continuing the farm loop', exc_info = True)
+
+        now = time.monotonic()
+        self._hv_wall_last_scan = now if upgraded_any else now - _BB_WALL_SCAN_INTERVAL_SECONDS + _BB_WALL_FAILED_RETRY_SECONDS
+        if upgraded_any:
+            logger.info('Home Village walls: batch completed')
+        return upgraded_any
 
 
     def _maybe_auto_upgrade(self, force = False):
@@ -954,7 +1016,11 @@ deselect, which would eat the upcoming Attack click.'''
         # duration_seconds == 0 → unlimited ("run until maxed"): only the user's Stop
         # ends the session; full storages park the loop in _maybe_idle instead.
         deadline = start_time + duration_seconds if duration_seconds else None
-        self._maybe_upgrade_walls(upgrade_walls)
+        battle_count = 0
+        if upgrade_walls:
+            logger.info('Home Village: initial check for wall upgrades before battle loop')
+            self._bb_wait_for_build_button(timeout = 4.0)
+            self._maybe_upgrade_walls(upgrade_walls, force = True)
         self._maybe_auto_upgrade()
         self._maybe_idle(deadline)
         cb = getattr(self, '_status_callback', None)
@@ -1003,7 +1069,15 @@ deselect, which would eat the upcoming Attack click.'''
                     return None
             else:
                 troop_failures = 0
-            self._maybe_upgrade_walls(upgrade_walls)
+            battle_count += 1
+            _check_every = max(1, getattr(self, '_hv_walls_check_every', 5))
+            if battle_count % _check_every == 0:
+                logger.info('Home Village: battle %d ended — looking for build button (4s) for wall upgrades (every %d battles)', battle_count, _check_every)
+                bx, by = self._bb_wait_for_build_button(timeout = 4.0)
+                if not bx:
+                    logger.info('Home Village: build button not ready after 4s — waiting additional 4s for village to settle')
+                    bx, by = self._bb_wait_for_build_button(timeout = 4.0)
+                self._maybe_upgrade_walls(upgrade_walls, force = True)
             self._maybe_auto_upgrade()
             self._maybe_idle(deadline)
             self.input.scroll(*self._scroll_point(), 5)
@@ -1041,6 +1115,17 @@ until nothing recognizable is left, then taps empty space and resets the view.''
             (ax, ay) = self.vision.find_template(frame, 'attack.png')
             if ax:
                 return None
+            (bx, by) = self.vision.find_template(frame, 'buildbtn.png')
+            if bx:
+                return None
+            # Check for green Return Home button on battle summary screen
+            if getattr(self, '_bb_return_home_failsafe', True):
+                gx, gy = self._find_bb_green_return_home_button(frame)
+                if gx:
+                    logger.info('Recovery: detected green Return Home button at (%d, %d) — clicking', gx, gy)
+                    self.input.click(gx, gy, pause = 0.5)
+                    clicked = True
+                    continue
             clicked = False
             for tmpl in recovery_buttons:
                 # Skip templates that don't exist for this aspect (e.g. returnhome2.png is 16:10 only).
@@ -1117,10 +1202,14 @@ end battle (2-star / gold / elixir / natural) → Return Home.'''
             _tmpl = getattr(self, '_bb_troop_template', 'babydragon.png')
             (bx, by) = self._wait_for_image(_tmpl, timeout = 30, error = False)
             if not bx:
-                msg = f'Builder Base: {_tmpl} not found after Find Now'
+                msg = f'Builder Base: {_tmpl} not found after Find Now — attempting to exit battle'
                 logger.warning(msg)
                 if cb:
                     cb(msg)
+                if self._loot_prioritise == 'elixir':
+                    self._bb_surrender_and_return_home()
+                else:
+                    self._bb_end_battle_and_return_home()
                 self._in_battle = False
                 self.reset_inactivity_timer()
                 continue
@@ -1148,9 +1237,9 @@ end battle (2-star / gold / elixir / natural) → Return Home.'''
             # The battle screen can still be fading in right after the zoom nudge (no deploy bar yet),
             # so retry with fresh screenshots for a few seconds before giving up.
             deployed = False
-            deploy_deadline = time.time() + 12
+            deploy_deadline = time.time() + 14
             while True:
-                if self._deploy_bb_baby_dragons(frame):
+                if self._deploy_bb_troops(frame):
                     deployed = True
                     break
                 if time.time() >= deploy_deadline:
@@ -1163,9 +1252,13 @@ end battle (2-star / gold / elixir / natural) → Return Home.'''
                 self._update_config_size(frame)
             if not deployed:
                 _t = getattr(self, '_bb_troop_template', 'babydragon.png')
-                logger.warning('Builder Base: %s still not visible after 12s — deploy failed', _t)
+                logger.warning('Builder Base: %s still not visible after 14s — deploy failed; ending battle', _t)
                 if frame is not None:
                     self._save_template_miss_snapshot(frame, _t, VisionService.bottom_half_region(frame))
+                if self._loot_prioritise == 'elixir':
+                    self._bb_surrender_and_return_home()
+                else:
+                    self._bb_end_battle_and_return_home()
                 self._in_battle = False
                 self.reset_inactivity_timer()
                 continue
@@ -1180,9 +1273,10 @@ end battle (2-star / gold / elixir / natural) → Return Home.'''
             self._in_battle = False
             self.reset_inactivity_timer()
             battle_count += 1
-            if battle_count % _BB_WALLS_CHECK_EVERY_BATTLES == 0:
-                logger.info('Builder Base: battle %d ended — looking for build button (4s) for wall upgrades', battle_count)
-                # Look for 4 brief seconds for the build button only after the 5th battle end
+            _check_every = max(1, getattr(self, '_bb_walls_check_every', _BB_WALLS_CHECK_EVERY_BATTLES))
+            if battle_count % _check_every == 0:
+                logger.info('Builder Base: battle %d ended — looking for build button (4s) for wall upgrades (every %d battles)', battle_count, _check_every)
+                # Look for 4 brief seconds for the build button only after the Nth battle end
                 bx, by = self._bb_wait_for_build_button(timeout = 4.0)
                 if not bx:
                     logger.info('Builder Base: build button not ready after 4s — waiting additional 4s for village to settle')
@@ -1359,8 +1453,8 @@ exact frame the bot saw, so you can compare it to what the template was cut from
         except Exception as e:
             logger.warning('Template miss snapshot failed: %s', e)
 
-    def _deploy_bb_baby_dragons(self, frame):
-        """Find all Baby Dragon icons, deploy on diamond edges, wait, then re-click saved icons."""
+    def _deploy_bb_troops(self, frame):
+        """Find all Builder Base troop icons (e.g. Baby Dragon, Night Witch), deploy on diamond edges."""
         self._is_deploying = True
         try:
             strategy = AttackStrategy(self.input, self.vision, self.config, self.stop_event)
@@ -1392,6 +1486,8 @@ exact frame the bot saw, so you can compare it to what the template was cut from
         finally:
             self._is_deploying = False
             self.reset_inactivity_timer()
+
+    _deploy_bb_baby_dragons = _deploy_bb_troops
 
     def _deploy_bb_battle_or_flying_machine(self, strategy):
         """One bar lookup: Battle Machine, else Flying Machine; deploy on a random diamond edge."""
@@ -1434,6 +1530,16 @@ can be re-triggered every _BB_COPTER_ABILITY_INTERVAL seconds while waiting.'''
                 continue
             self._update_config_size(frame)
             copter_last_click = self._bb_maybe_use_copter_ability(frame, copter_last_click)
+
+            # If the battle has already finished (Return Home visible), click it immediately!
+            if getattr(self, '_bb_return_home_failsafe', True):
+                gx, gy = self._find_bb_green_return_home_button(frame)
+                if gx:
+                    logger.info('Builder Base: battle already ended — Return Home visible at (%d, %d)', gx, gy)
+                    self.input.click(gx, gy, pause = 0.2)
+                    self._bb_wait_for_village_after_return_home()
+                    return None
+
             bot_roi = VisionService.bottom_half_region(frame)
             (ex, ey) = self.vision.find_template(frame, 'endbattle.png', region = bot_roi)
             if ex:
@@ -1443,8 +1549,7 @@ can be re-triggered every _BB_COPTER_ABILITY_INTERVAL seconds while waiting.'''
             if self.stop_event.wait(0.5):
                 return None
         if not end_battle_clicked:
-            logger.warning('Builder Base: endbattle.png not found')
-            return None
+            logger.warning('Builder Base: endbattle.png not found — checking for Return Home or Okay')
         self._bb_dismiss_okay_and_return_home()
 
     
@@ -1480,6 +1585,13 @@ Flying/Battle Machine ability firing every _BB_COPTER_ABILITY_INTERVAL seconds w
                 continue
             self._update_config_size(frame)
             copter_last_click = self._bb_maybe_use_copter_ability(frame, copter_last_click)
+            if getattr(self, '_bb_return_home_failsafe', True):
+                gx, gy = self._find_bb_green_return_home_button(frame)
+                if gx:
+                    logger.info('Builder Base: detected green Return Home button at (%d, %d)', gx, gy)
+                    self.input.click(gx, gy, pause = 0.2)
+                    self._bb_wait_for_village_after_return_home()
+                    return None
             (ox, oy) = self.vision.find_template(frame, 'okay.png')
             if ox:
                 self.input.click(ox, oy, pause = 0.15)
@@ -1490,6 +1602,7 @@ Flying/Battle Machine ability firing every _BB_COPTER_ABILITY_INTERVAL seconds w
             (rx, ry) = self.vision.find_template(frame, rh_template, threshold = 0.8, region = search_region, scale_template = scale_template)
             if rx:
                 self.input.click(rx, ry, pause = 0.2)
+                self._bb_wait_for_village_after_return_home()
                 return None
             (cx, cy) = self.vision.find_template(frame, 'chestclaim.png')
             if cx:
@@ -1498,6 +1611,7 @@ Flying/Battle Machine ability firing every _BB_COPTER_ABILITY_INTERVAL seconds w
                 if self.stop_event.wait(0.35):
                     return None
                 self._tap_empty_until_chest_continue()
+                self._bb_wait_for_village_after_return_home()
                 return None
             if self.stop_event.wait(0.5):
                 return None
@@ -1513,9 +1627,11 @@ Flying/Battle Machine ability firing every _BB_COPTER_ABILITY_INTERVAL seconds w
             if self.stop_event.wait(0.35):
                 return None
             self._tap_empty_until_chest_continue()
+            self._bb_wait_for_village_after_return_home()
             return None
         if rx:
             self.input.click(rx, ry, pause = 0.2)
+            self._bb_wait_for_village_after_return_home()
             return None
         logger.warning('Builder Base: breturnhome.png not found — retrying via normal dismiss flow')
         self._bb_dismiss_okay_and_return_home(max_retries = 1)
@@ -1553,9 +1669,70 @@ may already be gone if the battle timer ran out while we were still polling for 
         frame = self.window.screenshot()
         if frame is not None:
             self._update_config_size(frame)
-            if not self._deploy_bb_baby_dragons(frame):
+            if not self._deploy_bb_troops(frame):
                 logger.info('Builder Base (gold): nothing left to redeploy after 3-star')
         self._bb_wait_for_natural_end_and_return_home()
+
+    
+    @staticmethod
+    def _find_bb_green_return_home_button(frame):
+        """Find the green 'Return Home' button on the battle summary screen.
+        Tries multi-scale matching with breturnhome.png first, then falls back
+        to emerald-green button contour detection in the bottom-center region."""
+        if frame is None or frame.size == 0:
+            return (None, None)
+        (h, w) = frame.shape[:2]
+        y0 = int(h * 0.60)
+        x0 = int(w * 0.20)
+        x1 = int(w * 0.80)
+        crop = frame[y0:h, x0:x1]
+        if crop.size == 0:
+            return (None, None)
+
+        tmpl_path = get_template_path('breturnhome.png')
+        if tmpl_path.is_file():
+            tmpl = cv2.imread(str(tmpl_path))
+            if tmpl is not None:
+                th, tw = tmpl.shape[:2]
+                base_scale = w / 992.0
+                scales = [base_scale * f for f in (0.75, 1.0, 1.25)]
+                for s in (0.7, 1.0, 1.5, 1.93):
+                    if s not in scales:
+                        scales.append(s)
+                best_score = 0.0
+                best_pt = None
+                for s in scales:
+                    sw = int(tw * s)
+                    sh = int(th * s)
+                    if sw >= crop.shape[1] or sh >= crop.shape[0] or sw < 20 or sh < 10:
+                        continue
+                    scaled_tmpl = cv2.resize(tmpl, (sw, sh), interpolation=cv2.INTER_AREA if s < 1 else cv2.INTER_CUBIC)
+                    res = cv2.matchTemplate(crop, scaled_tmpl, cv2.TM_CCOEFF_NORMED)
+                    _, max_val, _, max_loc = cv2.minMaxLoc(res)
+                    if max_val > best_score:
+                        best_score = max_val
+                        best_pt = (x0 + max_loc[0] + sw // 2, y0 + max_loc[1] + sh // 2)
+                if best_score >= 0.65 and best_pt is not None:
+                    return best_pt
+
+        # HSV color contour fallback for emerald green button
+        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, (35, 60, 60), (85, 255, 255))
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        min_w, min_h = int(w * 0.07), int(h * 0.03)
+        best, max_area = None, 0
+        for c in contours:
+            bx, by, bw, bh = cv2.boundingRect(c)
+            ratio = bw / float(bh) if bh > 0 else 0
+            if bw >= min_w and bh >= min_h and 1.5 <= ratio <= 4.5:
+                center_x = x0 + bx + bw // 2
+                if abs(center_x - w // 2) < int(w * 0.25):
+                    if bw * bh > max_area:
+                        max_area = bw * bh
+                        best = (center_x, y0 + by + bh // 2)
+        if best:
+            return best
+        return (None, None)
 
     
     def _bb_return_home_template_for_screen(self, width, height):
@@ -1581,9 +1758,24 @@ covering it. Picks 1080p-native template when capture is ~1920x1080.'''
             (h, w) = frame.shape[:2]
             (template_name, scale_template) = self._bb_return_home_template_for_screen(w, h)
             search_region = self._search_region_for_template(frame, template_name, None, None, 200)
+
+            # 1. Standard find_template with scale_template
             (x, y) = self.vision.find_template(frame, template_name, threshold = 0.8, region = search_region, scale_template = scale_template)
             if x:
                 return (x, y, template_name)
+
+            # 2. Unscaled find_template (essential for arbitrary window sizes like 992x599)
+            (x, y) = self.vision.find_template(frame, template_name, threshold = 0.72, region = search_region, scale_template = False)
+            if x:
+                return (x, y, template_name)
+
+            # 3. Green Return Home button finder (multi-scale + HSV contour fallback)
+            if getattr(self, '_bb_return_home_failsafe', True):
+                (gx, gy) = self._find_bb_green_return_home_button(frame)
+                if gx:
+                    return (gx, gy, template_name)
+
+            # 4. Chest claim popup
             (cx, cy) = self.vision.find_template(frame, 'chestclaim.png')
             if cx:
                 return (cx, cy, 'chestclaim.png')
@@ -1592,11 +1784,68 @@ covering it. Picks 1080p-native template when capture is ~1920x1080.'''
         return (None, None, template_name)
 
     
+    def _bb_wait_for_village_after_return_home(self, timeout = 10):
+        '''Wait until the village is restored after clicking Return Home, ensuring we don't proceed while stuck on summary.'''
+        start = time.time()
+        last_reclick = 0.0
+        while time.time() - start < timeout:
+            self._check_stop()
+            frame = self.window.screenshot()
+            if frame is None:
+                if self.stop_event.wait(0.3):
+                    return None
+                continue
+            self._update_config_size(frame)
+            # Village check 1: attack button
+            (ax, ay) = self.vision.find_template(frame, 'attack.png', threshold = 0.75)
+            if ax:
+                return None
+            # Village check 2: shop / build button
+            (bx, by) = self.vision.find_template(frame, 'buildbtn.png', threshold = 0.75)
+            if bx:
+                return None
+            # Popups: chest or okay
+            (ox, oy) = self.vision.find_template(frame, 'okay.png', threshold = 0.75)
+            if ox:
+                logger.info('Builder Base post-battle: dismissing okay.png popup')
+                self.input.click(ox, oy, pause = 0.2)
+                continue
+            (cx, cy) = self.vision.find_template(frame, 'chestclaim.png', threshold = 0.75)
+            if cx:
+                logger.info('Builder Base post-battle: claiming chest')
+                self.input.click(cx, cy, pause = 0.2)
+                self._tap_empty_until_chest_continue()
+                continue
+            # If Return Home button is still visible after clicking, re-click it after 2 seconds
+            now = time.time()
+            if now - start >= 2.0 and now - last_reclick >= 2.0:
+                if getattr(self, '_bb_return_home_failsafe', True):
+                    gx, gy = self._find_bb_green_return_home_button(frame)
+                    if gx:
+                        logger.info('Builder Base post-battle: Return Home still present at (%d, %d) — re-clicking', gx, gy)
+                        self.input.click(gx, gy, pause = 0.3)
+                        last_reclick = now
+            if self.stop_event.wait(0.4):
+                return None
+        logger.warning('Builder Base: village not detected after Return Home — running recovery')
+        self._recover_stuck_screen()
+
+    
     def _bb_dismiss_okay_and_return_home(self, *, retry_battle_template = 'endbattle.png', max_retries = _BB_RETURN_HOME_END_BATTLE_RETRIES):
         '''Dismiss Okay, tap Return Home; retry battle-end + Okay if Return Home stays hidden.'''
         return_home_template = _BB_RETURN_HOME_TEMPLATE
         for attempt in range(max_retries + 1):
             self._check_stop()
+            # Fast check: If Return Home is ALREADY visible (e.g. 0% damage summary screen), click it!
+            if getattr(self, '_bb_return_home_failsafe', True):
+                frame = self.window.screenshot()
+                if frame is not None:
+                    gx, gy = self._find_bb_green_return_home_button(frame)
+                    if gx:
+                        logger.info('Builder Base: Return Home already visible at (%d, %d) — clicking immediately', gx, gy)
+                        self.input.click(gx, gy, pause = 0.2)
+                        self._bb_wait_for_village_after_return_home()
+                        return None
             if attempt > 0:
                 (bx, by) = self._wait_for_image(retry_battle_template, timeout = 3, error = False)
                 if bx:
@@ -1614,26 +1863,37 @@ covering it. Picks 1080p-native template when capture is ~1920x1080.'''
                 if self.stop_event.wait(0.35):
                     return None
                 self._tap_empty_until_chest_continue()
+                self._bb_wait_for_village_after_return_home()
                 return None
             if rx:
                 self.input.click(rx, ry, pause = 0.2)
                 if attempt > 0:
                     logger.info('Builder Base: return home after %d %s retry(ies)', attempt, retry_battle_template)
+                self._bb_wait_for_village_after_return_home()
                 return None
             if not attempt < max_retries:
                 continue
             logger.info('Builder Base: %s not found — retrying %s + okay (%d/%d)', return_home_template, retry_battle_template, attempt + 1, max_retries)
-        logger.warning('Builder Base: %s not found after %d %s retries', return_home_template, max_retries, retry_battle_template)
+        logger.warning('Builder Base: %s not found after %d %s retries — running recovery', return_home_template, max_retries, retry_battle_template)
+        self._recover_stuck_screen()
 
     
     def _bb_surrender_and_return_home(self):
         '''Elixir prioritise: surrender right after deploy, then Okay + Return Home.'''
-        (sx, sy) = self._wait_for_image('surrender.png', timeout = 10, error = False)
+        if getattr(self, '_bb_return_home_failsafe', True):
+            frame = self.window.screenshot()
+            if frame is not None:
+                gx, gy = self._find_bb_green_return_home_button(frame)
+                if gx:
+                    logger.info('Builder Base (elixir): Return Home already visible at (%d, %d) — clicking', gx, gy)
+                    self.input.click(gx, gy, pause = 0.2)
+                    self._bb_wait_for_village_after_return_home()
+                    return None
+        (sx, sy) = self._wait_for_image('surrender.png', timeout = 6, error = False)
         if sx:
             self.input.click(sx, sy, pause = 0.15)
         else:
-            logger.warning('Builder Base (elixir): surrender.png not found')
-            return None
+            logger.warning('Builder Base (elixir): surrender.png not found — checking for Return Home or Okay')
         self._bb_dismiss_okay_and_return_home(retry_battle_template = 'surrender.png')
 
     
@@ -1744,10 +2004,11 @@ search the full battle frame and let non-overlapping template matches count the 
 
     
     @staticmethod
-    def _bb_wall_action_region(frame):
+    def _bb_wall_action_region(frame, village = 'builder'):
         '''Centered bottom action bar, excluding Build-list prices and builder portraits.'''
         (h, w) = frame.shape[:2]
-        return (0, int(h * 0.55), int(w * 0.70), int(h * 0.40))
+        w_max = int(w * 0.95) if village == 'home' else int(w * 0.70)
+        return (0, int(h * 0.55), w_max, int(h * 0.40))
 
     
     def _bb_find_wall_rows(self, frame):
@@ -1805,10 +2066,11 @@ nothing at all). As long as a Wall row is still in the panel, that row is the an
         return cv2.resize(cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY), (48, 96), interpolation = cv2.INTER_AREA)
 
     
-    def _bb_scroll_build_panel(self, frame):
+    def _bb_scroll_build_panel(self, frame, village = 'builder'):
         '''Wheel down inside the Build panel (the list scrolls on the right).'''
         (h, w) = frame.shape[:2]
-        self.input.scroll(int(w * 0.86), int(h * 0.55), _BB_WALL_PANEL_WHEEL_CLICKS)
+        clicks = _HV_WALL_PANEL_WHEEL_CLICKS if village == 'home' else _BB_WALL_PANEL_WHEEL_CLICKS
+        self.input.scroll(int(w * 0.86), int(h * 0.55), clicks)
 
     
     def _bb_wait_for_build_button(self, timeout = 4.0):
@@ -1957,33 +2219,9 @@ confirm the batch → Okay.'''
 panel rows' own cost icons can never be mistaken for the Upgrade buttons).'''
             # Builder Base reads the same bar through _bb_wall_prices_from_frame, which tries
             # the currency-icon anchors first and falls back to this reader.
-            return VisionService.upgrade_cost_redness_by_resource_icons(frame, region = self._bb_wall_action_region(frame))
+            return VisionService.upgrade_cost_redness_by_resource_icons(frame, match_threshold = 0.55, region = self._bb_wall_action_region(frame, village = village))
 
-        bx, by = None, None
-        if village == 'builder':
-            bx, by = self._bb_wait_for_build_button(timeout = 4.0)
-        else:
-            deadline = time.monotonic() + 4.0
-            while time.monotonic() < deadline:
-                self._check_stop()
-                frame = self.window.screenshot()
-                if frame is None:
-                    if self.stop_event.wait(0.3):
-                        return None
-                    continue
-                self._update_config_size(frame)
-                bot_roi = VisionService.bottom_half_region(frame)
-                (bx, by) = self.vision.find_template(frame, 'buildbtn.png', threshold = 0.8, region = bot_roi)
-                if bx:
-                    break
-                (cx, cy) = self.vision.find_template(frame, 'bbpanelclose.png', threshold = 0.8)
-                if cx:
-                    self.input.click(cx, cy, pause = 0.4)
-                    if self.stop_event.wait(0.3):
-                        return False
-                    continue
-                if self.stop_event.wait(0.35):
-                    return None
+        bx, by = self._bb_wait_for_build_button(timeout = 4.0)
         if not bx:
             logger.info('Wall upgrade: Build button not found within 4s — skipping this pass')
             return False
@@ -1997,6 +2235,8 @@ panel rows' own cost icons can never be mistaken for the Upgrade buttons).'''
         row = None
         scrolls = 0
         last_sig = None
+        no_move_count = 0
+        max_scroll_steps = _HV_WALL_PANEL_SCROLL_STEPS if village == 'home' else _BB_WALL_PANEL_SCROLL_STEPS
         while True:
             self._check_stop()
             frame = self.window.screenshot()
@@ -2008,21 +2248,27 @@ panel rows' own cost icons can never be mistaken for the Upgrade buttons).'''
                 row = self._bb_wall_click_point(rows[0])
                 if row:
                     if scrolls:
-                        logger.info('Wall upgrade: Wall row found after %d panel scroll(s)', scrolls)
+                        logger.info('Wall upgrade: Wall row found after %d panel scroll(s) in %s', scrolls, village)
                     break
-            if scrolls >= _BB_WALL_PANEL_SCROLL_STEPS:
+            if scrolls >= max_scroll_steps:
+                logger.info('Wall upgrade: reached maximum scroll steps (%d) in %s — stopping search', max_scroll_steps, village)
                 break
             sig = self._bb_panel_signature(frame)
             if sig is not None and last_sig is not None:
                 # Nothing moved after the previous nudge: the list is at its end, so more
                 # wheeling cannot reveal anything and only delays the skip.
-                if float(np.mean(cv2.absdiff(sig, last_sig))) < 0.5:
-                    logger.info('Wall upgrade: Build panel reached its end with no Wall row (after %d scroll(s))', scrolls)
-                    break
+                diff = float(np.mean(cv2.absdiff(sig, last_sig)))
+                if diff < 0.5:
+                    no_move_count += 1
+                    if no_move_count >= 2:
+                        logger.info('Wall upgrade: Build panel reached its end with no Wall row (after %d scroll(s))', scrolls)
+                        break
+                else:
+                    no_move_count = 0
             last_sig = sig
-            self._bb_scroll_build_panel(frame)
+            self._bb_scroll_build_panel(frame, village = village)
             scrolls += 1
-            if self.stop_event.wait(0.4):
+            if self.stop_event.wait(0.35):
                 return None
         if not row:
             logger.info('Wall upgrade: no Wall row in the Build panel — skipping this pass')
@@ -2036,7 +2282,7 @@ panel rows' own cost icons can never be mistaken for the Upgrade buttons).'''
             if frame is None:
                 return None
             self._update_config_size(frame)
-            roi = self._bb_wall_action_region(frame)
+            roi = self._bb_wall_action_region(frame, village = village)
             (umx, umy) = self.vision.find_template(frame, 'bbupgrademore.png', threshold = 0.8, region = roi)
             if not umx:
                 (umx, umy) = self.vision.find_template(frame, 'upgrademore.png', threshold = 0.8, region = roi)
@@ -2049,81 +2295,46 @@ panel rows' own cost icons can never be mistaken for the Upgrade buttons).'''
             return False
         self.input.click(umx, umy, pause = 0.4, rand = False)
         if village == 'builder':
-            return self._bb_wall_batch_sequence(preferred_resource = preferred_resource)
-
-        # Preserve the Home Village batch policy: stop when either resource can no longer pay,
-        # then reduce the batch if needed and confirm through the existing Home Village flow.
-        added = 0
-        for _ in range(_WALL_BATCH_MAX_ADDS):
-            self._check_stop()
-            frame = self.window.screenshot()
-            if frame is None:
-                return None
-            self._update_config_size(frame)
-            pair = _cost_pair(frame)
-            if not (pair.gold.cost_roi_xywh or pair.elixir.cost_roi_xywh):
-                logger.info('Wall upgrade: upgrade cost buttons not visible — stopping the batch')
-                break
-            affordable = (
-                (pair.gold.cost_roi_xywh is not None and pair.gold.redness < 0.2)
-                or (pair.elixir.cost_roi_xywh is not None and pair.elixir.redness < 0.2)
-            )
-            if not affordable:
-                break
-            roi = self._bb_wall_action_region(frame)
-            (awx, awy) = VisionService.find_active_addwall(frame, region = roi)
-            if not awx:
-                break
-            self.input.click(awx, awy, pause = 0.3, rand = False)
-            added += 1
-        if added == 0:
-            self._deselect_wall_ui()
-            return None
-        frame = self.window.screenshot()
-        if frame is None:
-            return None
-        self._update_config_size(frame)
-        pair = _cost_pair(frame)
-        (fh, fw) = frame.shape[:2]
-        mid_roi = (fw // 4, fh // 2, fw // 2, fh - fh // 2)
-        if pair.gold.redness >= 0.2 and pair.elixir.redness >= 0.2:
-            (rwx, rwy) = VisionService.find_active_removewall(frame, region = mid_roi)
-            if rwx:
-                self.input.click(rwx, rwy, pause = 0.4, rand = False)
-        elif added > 1 and pair.elixir.redness >= 0.2 and pair.gold.redness < 0.2 and pair.gold.cost_roi_xywh:
-            (rwx, rwy) = VisionService.find_active_removewall(frame, region = mid_roi)
-            if rwx:
-                logger.info('Wall upgrade: gold is the payer — removing one wall to keep the attack entry fee')
-                self.input.click(rwx, rwy, pause = 0.4, rand = False)
-        logger.info('Wall upgrade: %d wall(s) added to batch', added)
-        self._upgrade_walls_pick_resource_and_okay()
-        return True
+            return self._bb_wall_batch_sequence(target_walls = 5, preferred_resource = preferred_resource, village = 'builder')
+        else:
+            return self._bb_wall_batch_sequence(target_walls = 5, preferred_resource = preferred_resource, village = 'home')
 
     
     _WallPrices = collections.namedtuple('_WallPrices', 'found_both both_red gold_center gold_red elixir_center elixir_red')
 
     
-    def _bb_wall_prices_from_frame(self, frame):
+    def _bb_wall_prices_from_frame(self, frame, village = 'builder'):
         '''Both Upgrade prices of the wall bar, read exactly the way the Home Village batch
+        does, with a second reader behind the first.
 
-does, with a second reader behind the first.
+        Primary: the two currency icons in the top-right corner of each ``Upgrade`` button — a
+        fixed anchor whose pixels never change, with the price digits counted for red just left of
+        it. Fallback: the shipped ``multiupgrade.png`` anchors with the red counted in the box above
+        each one (the reader the Home Village flow uses). Either way no digits enter a template, so
+        a price change can never turn a match into a miss.'''
+        region = self._bb_wall_action_region(frame, village = village)
+        if village == 'home':
+            multi = VisionService.upgrade_cost_redness_by_resource_icons(frame, match_threshold = 0.55, region = region)
+            (gold, elixir) = (multi.gold, multi.elixir)
+            found = bool((gold.found and gold.center) or (elixir.found and elixir.center))
+            both_red = bool((gold.found and gold.redness >= _WALL_PRICE_RED_SHARE) and (elixir.found and elixir.redness >= _WALL_PRICE_RED_SHARE))
+            gold_red = bool(not gold.found or gold.redness >= _WALL_PRICE_RED_SHARE)
+            elixir_red = bool(not elixir.found or elixir.redness >= _WALL_PRICE_RED_SHARE)
+            return self._WallPrices(found, both_red, gold.center, gold_red, elixir.center, elixir_red)
 
-Primary: the two currency icons in the top-right corner of each ``Upgrade`` button — a
-fixed anchor whose pixels never change, with the price digits counted for red just left of
-it. Fallback: the shipped ``multiupgrade.png`` anchors with the red counted in the box above
-each one (the reader the Home Village flow uses). Either way no digits enter a template, so
-a price change can never turn a match into a miss.'''
-        region = self._bb_wall_action_region(frame)
         pair = VisionService.bb_wall_payment_buttons(frame, gold_template = _BB_WALL_GOLD_TEMPLATE, elixir_template = _BB_WALL_ELIXIR_TEMPLATE, match_threshold = _BB_WALL_ANCHOR_THRESHOLD, region = region)
         if pair.found_both:
             return self._WallPrices(True, pair.both_red, pair.gold.center, pair.gold.price_red, pair.elixir.center, pair.elixir.price_red)
-        multi = VisionService.upgrade_cost_redness_by_resource_icons(frame, region = region)
+        multi = VisionService.upgrade_cost_redness_by_resource_icons(frame, match_threshold = 0.55, region = region)
         (gold, elixir) = (multi.gold, multi.elixir)
-        found = bool(gold.found and elixir.found and gold.center and elixir.center)
-        return self._WallPrices(found, bool(gold.redness >= _WALL_PRICE_RED_SHARE and elixir.redness >= _WALL_PRICE_RED_SHARE), gold.center, bool(gold.redness >= _WALL_PRICE_RED_SHARE), elixir.center, bool(elixir.redness >= _WALL_PRICE_RED_SHARE))
+        found = bool((gold.found and gold.center) or (elixir.found and elixir.center))
+        both_red = bool((gold.found and gold.redness >= _WALL_PRICE_RED_SHARE) and (elixir.found and elixir.redness >= _WALL_PRICE_RED_SHARE))
+        gold_red = bool(not gold.found or gold.redness >= _WALL_PRICE_RED_SHARE)
+        elixir_red = bool(not elixir.found or elixir.redness >= _WALL_PRICE_RED_SHARE)
+        return self._WallPrices(found, both_red, gold.center, gold_red, elixir.center, elixir_red)
 
     
-    def _bb_wall_read_prices(self, attempts = 3):
+    def _bb_wall_read_prices(self, attempts = 3, village = 'builder'):
         '''Fresh frame plus both wall-bar prices, retried while the bar redraws.'''
         frame = None
         prices = None
@@ -2136,7 +2347,7 @@ a price change can never turn a match into a miss.'''
                     return (None, None)
                 continue
             self._update_config_size(frame)
-            prices = self._bb_wall_prices_from_frame(frame)
+            prices = self._bb_wall_prices_from_frame(frame, village = village)
             if prices.found_both:
                 return (frame, prices)
             if attempt < tries - 1 and self.stop_event.wait(_BB_WALL_PRICE_READ_SETTLE_SECONDS):
@@ -2144,40 +2355,43 @@ a price change can never turn a match into a miss.'''
         return (frame, prices)
 
     
-    def _bb_wall_batch_sequence(self, target_walls = 5, preferred_resource = None):
-        """Builder Base wall batch: up to 5 walls per pass, supporting dual resource (Gold + Elixir) passes."""
+    def _bb_wall_batch_sequence(self, target_walls = 5, preferred_resource = None, village = 'builder'):
+        """Wall batch sequence: up to target_walls (or unlimited when target_walls is None), supporting dual resource passes."""
         added = 0
-        (frame, prices) = self._bb_wall_read_prices(attempts = 6)
+        village_name = 'Home Village' if village == 'home' else 'Builder Base'
+        (frame, prices) = self._bb_wall_read_prices(attempts = 6, village = village)
         if frame is None or prices is None or not prices.found_both:
-            logger.warning('Builder Base walls: the two Upgrade prices were not found in the wall bar - stopping without purchase')
+            logger.warning('%s walls: the Upgrade prices were not found in the wall bar - stopping without purchase', village_name)
             return False
 
         # Decide which resource this pass is targeting
         target_res = preferred_resource
         if target_res == 'gold':
             if prices.gold_red:
-                if not prices.elixir_red:
-                    logger.info('Builder Base walls: Gold is red but Elixir is affordable — switching to Elixir')
+                if not prices.elixir_red and prices.elixir_center:
+                    logger.info('%s walls: Gold is red but Elixir is affordable — switching to Elixir', village_name)
                     target_res = 'elixir'
                 else:
-                    logger.info('Builder Base walls: Gold is red (not affordable for 1 wall)')
+                    logger.info('%s walls: Gold is red (not affordable for 1 wall)', village_name)
                     return False
         elif target_res == 'elixir':
             if prices.elixir_red:
-                if not prices.gold_red:
-                    logger.info('Builder Base walls: Elixir is red but Gold is affordable — switching to Gold')
+                if not prices.gold_red and prices.gold_center:
+                    logger.info('%s walls: Elixir is red but Gold is affordable — switching to Gold', village_name)
                     target_res = 'gold'
                 else:
-                    logger.info('Builder Base walls: Elixir is red (not affordable for 1 wall)')
+                    logger.info('%s walls: Elixir is red (not affordable for 1 wall)', village_name)
                     return False
         else:
-            if getattr(self, '_loot_prioritise', None) == 'elixir':
-                target_res = 'elixir' if not prices.elixir_red else ('gold' if not prices.gold_red else None)
+            if village == 'home':
+                target_res = 'elixir' if (prices.elixir_center and not prices.elixir_red) else ('gold' if (prices.gold_center and not prices.gold_red) else None)
+            elif getattr(self, '_loot_prioritise', None) == 'elixir':
+                target_res = 'elixir' if (prices.elixir_center and not prices.elixir_red) else ('gold' if (prices.gold_center and not prices.gold_red) else None)
             else:
-                target_res = 'gold' if not prices.gold_red else ('elixir' if not prices.elixir_red else None)
+                target_res = 'gold' if (prices.gold_center and not prices.gold_red) else ('elixir' if (prices.elixir_center and not prices.elixir_red) else None)
 
         if not target_res:
-            logger.warning('Builder Base walls: neither resource is affordable for 1 wall - stopping')
+            logger.warning('%s walls: neither resource is affordable for 1 wall - stopping', village_name)
             return False
 
         # Check if the OTHER resource was ALSO affordable on this initial 1-wall read
@@ -2186,19 +2400,21 @@ a price change can never turn a match into a miss.'''
         self._bb_wall_other_resource_affordable = other_affordable
 
         # 1 wall is already selected upon entering Upgrade More; add up to target_walls total
-        adds_needed = max(0, target_walls - 1)
+        # When target_walls is None (Home Village), no 5-wall limit! Adds as many affordable walls as possible.
+        max_adds = 100 if village == 'home' else _BB_WALL_BATCH_MAX_ADDS
+        adds_needed = max(0, target_walls - 1) if target_walls is not None else max_adds
         for i in range(adds_needed):
             self._check_stop()
             target_red = prices.gold_red if target_res == 'gold' else prices.elixir_red
             if target_red:
                 break
-            add = self._bb_wall_add_center(frame)
+            add = self._bb_wall_add_center(frame, village = village, prices = prices)
             if not add:
-                logger.warning('Builder Base walls: Add Wall button not found')
+                logger.info('%s walls: Add Wall button not found or reached maximum wall limit for row', village_name)
                 break
             self.input.click(*add, pause = _BB_WALL_ADD_CLICK_SECONDS, rand = False)
             added += 1
-            (frame, prices) = self._bb_wall_read_prices()
+            (frame, prices) = self._bb_wall_read_prices(village = village)
 
         # If target price is red, remove walls until affordable
         while prices and added > 0:
@@ -2206,64 +2422,180 @@ a price change can never turn a match into a miss.'''
             target_red = prices.gold_red if target_res == 'gold' else prices.elixir_red
             if not target_red:
                 break
-            logger.info('Builder Base walls: %s price red; removing one wall', target_res)
-            remove = self._bb_wall_remove_center(frame)
+            logger.info('%s walls: %s price red; removing one wall', village_name, target_res)
+            remove = self._bb_wall_remove_center(frame, village = village, prices = prices)
             if not remove:
+                logger.warning('%s walls: Remove Wall button not found — cannot decrement', village_name)
                 break
             self.input.click(*remove, pause = _BB_WALL_REMOVE_CLICK_SECONDS, rand = False)
             added -= 1
-            (frame, prices) = self._bb_wall_read_prices()
+            (frame, prices) = self._bb_wall_read_prices(village = village)
 
         if frame is None or prices is None or not prices.found_both:
-            logger.warning('Builder Base walls: prices unreadable - stopping without purchase')
+            logger.warning('%s walls: prices unreadable - stopping without purchase', village_name)
             return False
 
         target_red = prices.gold_red if target_res == 'gold' else prices.elixir_red
         if target_red:
-            logger.warning('Builder Base walls: cannot afford wall upgrade with %s - stopping without purchase', target_res)
+            logger.warning('%s walls: cannot afford wall upgrade with %s - stopping without purchase', village_name, target_res)
             return False
 
         total_walls = 1 + added
-        logger.info('Builder Base walls: upgrading batch of %d wall(s) with %s', total_walls, target_res)
-        return self._bb_wall_pay_and_okay(prices, resource = target_res)
+        logger.info('%s walls: upgrading batch of %d wall(s) with %s', village_name, total_walls, target_res)
+        return self._bb_wall_pay_and_okay(prices, resource = target_res, village = village)
 
     
-    def _bb_wall_add_center(self, frame):
+    def _bb_wall_add_center(self, frame, village = 'builder', prices = None):
         '''Click point of the enabled "Add Wall" (+1) button, or ``None``.
 
-The new-UI bar hides the dedicated template on some layouts, so the lime ``+1``
-control (template plus lime color verification) is the dependable fallback.'''
-        region = self._bb_wall_action_region(frame)
-        add = VisionService.wall_bar_button(frame, _BB_WALL_ADD_TEMPLATE, match_threshold = _BB_WALL_ANCHOR_THRESHOLD, region = region)
-        if add.found and add.center:
-            return add.center
-        # Fallback for a shipment without the new-UI crop: the lime "+1" control.
+NEVER clicks "+10 Add Wall":
+In Home Village:
+    [-1 Remove Wall]  [+10 Add Wall]  [+1 Add Wall]  [Upgrade (Gold)]  [Upgrade (Elixir)]
+    Buttons are equally spaced by step = abs(elixir_x - gold_x).
+    [+1 Add Wall] sits exactly 1 step left of Gold (gx - step).
+    [+10 Add Wall] sits 2 steps left of Gold (gx - 2 * step).
+In Builder Base:
+    [-1 Remove Wall]  [+1 Add Wall]  [Upgrade (Gold)]  [Upgrade (Elixir)]
+    [+1 Add Wall] sits exactly 1 step left of Gold (gx - step).
+
+Does not rely on wall graphics (which change at every wall level), only on the
+stable Upgrade anchors, geometry, and button text.'''
+        if frame is None or frame.size == 0:
+            return None
+
+        if prices is None:
+            prices = self._bb_wall_prices_from_frame(frame, village = village)
+
+        (h, w) = frame.shape[:2]
+
+        # 1. Primary: Geometric derivation from Gold & Elixir Upgrade buttons (100% immune to wall image variations)
+        if prices and prices.gold_center:
+            gx, gy = prices.gold_center
+            if prices.elixir_center:
+                step = abs(prices.elixir_center[0] - gx)
+            else:
+                step = int(round(w * 0.08125))
+
+            # [+1 Add Wall] is ALWAYS exactly 1 step left of Gold Upgrade
+            ax = int(gx - step)
+            ay = gy
+
+            # Ensure ax is well within frame and strictly to the right of [+10 Add Wall]
+            if village == 'home':
+                min_x = int(gx - 1.45 * step)
+                if ax <= min_x:
+                    logger.warning('Add Wall calculation landed too close to +10 Add Wall — clamping to gx - step')
+                    ax = int(gx - step)
+
+            if 0 <= ax < w and 0 <= ay < h:
+                # Check if the "Add Wall" text at the bottom of this button is red (disabled/unaffordable)
+                btn_w = max(10, int(step * 0.9))
+                btn_h = max(10, int(step * 0.9))
+                x0 = max(0, int(ax - btn_w // 2))
+                x1 = min(w, int(ax + btn_w // 2))
+                y0 = max(0, int(ay - btn_h // 2))
+                y1 = min(h, int(ay + btn_h // 2))
+                crop = frame[y0:y1, x0:x1]
+                if crop.size > 0:
+                    text_area = crop[int(crop.shape[0] * 0.65):]
+                    if text_area.size > 0:
+                        red_frac = VisionService.red_hue_fraction(text_area)
+                        if red_frac >= 0.12:
+                            logger.info('%s walls: +1 Add Wall text is red (disabled/unaffordable)', village)
+                            return None
+                return (ax, ay)
+
+        # 2. Template matching fallback:
+        # Match "Add Wall" text. If multiple matches exist, pick the RIGHTMOST match (+1 Add Wall),
+        # NEVER the leftmost match (+10 Add Wall)!
+        region = self._bb_wall_action_region(frame, village = village)
+        matches = VisionService._find_template_matches(frame, 'addwall.png', match_threshold = _BB_WALL_ANCHOR_THRESHOLD, region = region, max_matches = 8)
+        if not matches:
+            matches = VisionService._find_template_matches(frame, _BB_WALL_ADD_TEMPLATE, match_threshold = _BB_WALL_ANCHOR_THRESHOLD, region = region, max_matches = 8)
+
+        if matches:
+            # The rightmost match is [+1 Add Wall]!
+            rightmost = max(matches, key = lambda m: m[0])
+            (left, top, tw, th, conf) = rightmost
+            cx = int(left) + int(tw) // 2
+            cy = int(top) + int(th) // 2
+            return (cx, cy)
+
+        # 3. Active lime addwall fallback
         (ax, ay) = VisionService.find_active_addwall(frame, region = region)
-        return (ax, ay) if ax else None
+        if ax:
+            return (ax, ay)
+
+        return None
 
     
-    def _bb_wall_remove_center(self, frame):
-        '''Click point of the "Remove Wall" button, or ``None``.
+    def _bb_wall_remove_center(self, frame, village = 'builder', prices = None):
+        '''Click point of the "Remove Wall" (-1) button, or ``None``.
 
-Template first; when no crop exists yet, fall back to the bar's own fixed grid:
-Remove Wall sits a constant share of the screen width left of the lime Add Wall
-control on the same row (measured live at 1288px: 607 -> 398).'''
-        region = self._bb_wall_action_region(frame)
+Derives the button coordinate geometrically from the detected Upgrade button prices:
+In Home Village:
+    [-1 Remove Wall]  [+10 Add Wall]  [+1 Add Wall]  [Upgrade (Gold)]  [Upgrade (Elixir)]
+    Buttons are equally spaced by step = abs(elixir_x - gold_x).
+    Remove Wall is 3 steps to the left of Gold (or 4 steps left of Elixir).
+In Builder Base:
+    [-1 Remove Wall]  [+1 Add Wall]  [Upgrade (Gold)]  [Upgrade (Elixir)]
+    Remove Wall is 2 steps to the left of Gold (or 3 steps left of Elixir).'''
+        if frame is None or frame.size == 0:
+            return None
+
+        if prices is None:
+            prices = self._bb_wall_prices_from_frame(frame, village = village)
+
+        (h, w) = frame.shape[:2]
+
+        # 1. Primary: Geometric derivation from detected Upgrade price buttons (highest accuracy)
+        if prices:
+            gx = prices.gold_center[0] if prices.gold_center else None
+            gy = prices.gold_center[1] if prices.gold_center else None
+            ex = prices.elixir_center[0] if prices.elixir_center else None
+            ey = prices.elixir_center[1] if prices.elixir_center else None
+
+            # Both Gold and Elixir buttons detected -> step is exact down to single pixel
+            if gx is not None and ex is not None:
+                step = abs(ex - gx)
+                cy = int((gy + ey) / 2.0)
+                rx = int(gx - 3.0 * step) if village == 'home' else int(gx - 2.0 * step)
+                if 0 <= rx < w and 0 <= cy < h:
+                    return (rx, cy)
+
+            # Only Gold button detected
+            if gx is not None and gy is not None:
+                step = int(round(w * 0.08125))
+                rx = int(gx - 3.0 * step) if village == 'home' else int(gx - 2.0 * step)
+                if 0 <= rx < w and 0 <= gy < h:
+                    return (rx, gy)
+
+            # Only Elixir button detected
+            if ex is not None and ey is not None:
+                step = int(round(w * 0.08125))
+                rx = int(ex - 4.0 * step) if village == 'home' else int(ex - 3.0 * step)
+                if 0 <= rx < w and 0 <= ey < h:
+                    return (rx, ey)
+
+        # 2. Secondary: Template matching (Builder Base crops or existing templates)
+        region = self._bb_wall_action_region(frame, village = village)
         for template in (_BB_WALL_REMOVE_TEMPLATE, 'removewall.png'):
             remove = VisionService.wall_bar_button(frame, template, match_threshold = _BB_WALL_ANCHOR_THRESHOLD, region = region)
             if remove.found and remove.center:
                 return remove.center
-        add = self._bb_wall_add_center(frame)
-        if not add:
-            return None
-        (h, w) = frame.shape[:2]
-        rx = int(add[0] - w * _BB_WALL_REMOVE_OFFSET_FRAC)
-        if rx < 0:
-            return None
-        return (rx, int(add[1]))
+
+        # 3. Fallback relative to Add Wall button if detected
+        add = self._bb_wall_add_center(frame, village = village, prices = prices)
+        if add:
+            step = int(round(w * 0.08125))
+            rx = int(add[0] - 2.0 * step) if village == 'home' else int(add[0] - 1.0 * step)
+            if 0 <= rx < w:
+                return (rx, int(add[1]))
+
+        return None
 
     
-    def _bb_wall_pay_and_okay(self, prices, resource = None):
+    def _bb_wall_pay_and_okay(self, prices, resource = None, village = 'builder'):
         '''Click the Upgrade button for the chosen resource, then Okay the "Upgrade Walls" dialog.'''
         picked = None
         if resource == 'gold':
@@ -2275,15 +2607,18 @@ control on the same row (measured live at 1288px: 607 -> 398).'''
                 if center and not red:
                     picked = center
                     break
+        village_name = 'Home Village' if village == 'home' else 'Builder Base'
         if picked is None:
-            logger.info('Builder Base walls: chosen price is not payable — not opening a purchase')
+            logger.info('%s walls: chosen price is not payable — not opening a purchase', village_name)
             return False
-        res_name = 'Builder Gold' if picked == prices.gold_center else 'Builder Elixir'
-        logger.info('Builder Base walls: paying with %s', res_name)
+        res_name = ('Gold' if picked == prices.gold_center else 'Elixir') if village == 'home' else ('Builder Gold' if picked == prices.gold_center else 'Builder Elixir')
+        logger.info('%s walls: paying with %s', village_name, res_name)
         self.input.click(*picked, pause = _BB_WALL_UPGRADE_CLICK_SECONDS, rand = False)
         (okx, oky) = self._wait_for_image('wallokay.png', timeout = _BB_WALL_OKAY_TIMEOUT_SECONDS, error = False)
         if not okx:
-            logger.warning('Builder Base walls: Okay not found after Upgrade — leaving the dialog for recovery')
+            (okx, oky) = self._wait_for_image('okay.png', timeout = 1.0, error = False)
+        if not okx:
+            logger.warning('%s walls: Okay not found after Upgrade — leaving the dialog for recovery', village_name)
             return False
         self.input.click(okx, oky, pause = 0.4, rand = False)
         if self.stop_event.wait(0.5):
@@ -2297,12 +2632,14 @@ control on the same row (measured live at 1288px: 607 -> 398).'''
             (rx, _) = self.vision.find_template(frame, 'wallokay.png', threshold = 0.68)
             residue = bool(rx)
         if residue:
-            logger.info('Builder Base walls: Okay left the dialog open — closing via red X')
+            logger.info('%s walls: Okay left the dialog open — closing via red X', village_name)
             (cx, cy) = self.vision.find_template(frame, 'bbdialogclose.png', threshold = 0.85)
+            if not cx:
+                (cx, cy) = self.vision.find_template(frame, 'exit.png', threshold = 0.68)
             if cx:
                 self.input.click(cx, cy, pause = 0.4, rand = False)
         else:
-            logger.info('Builder Base walls: batch confirmed')
+            logger.info('%s walls: batch confirmed', village_name)
         return not residue
 
     
@@ -2333,10 +2670,13 @@ old hammer clicks used to leave behind has no Okay at all.'''
         if frame is None:
             return None
         self._update_config_size(frame)
-        (cx, cy) = self.vision.find_template(frame, 'bbpanelclose.png', threshold = 0.8)
+        (cx, cy) = self.vision.find_template(frame, 'bbpanelclose.png', threshold = 0.75)
         if not cx:
-            logger.info('Wall upgrade: Build panel close control not visible')
-            return None
+            (cx, cy) = self.vision.find_template(frame, 'bbdialogclose.png', threshold = 0.75)
+        if not cx:
+            (h, w) = frame.shape[:2]
+            cx, cy = int(w * 0.95), int(h * 0.09)
+            logger.info('Wall upgrade: Build panel close template not found, clicking fallback close point (%d, %d)', cx, cy)
         self.input.click(cx, cy, pause = 0.4)
         if self.stop_event.wait(0.45):
             return None

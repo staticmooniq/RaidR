@@ -30,6 +30,15 @@ debug/
 !assets/*.png
 !assets/**/*.png
 !templates/**/*.png
+!website/assets/*.png
+!website/assets/**/*.png
 
 test_*.py
 test_*.bat
+
+# Local Agent skills & configs
+.agents/
+
+# Experimental C# / WinUI rewrite (local sandbox only — never track or publish)
+Experimental/
+experimental/

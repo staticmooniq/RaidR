@@ -747,14 +747,14 @@ Best ``cv2.matchTemplate`` match: ``(left, top, t_w, t_h, score)``.
 
         
         @staticmethod
-        def upgrade_cost_redness_by_resource_icons(screen_img, *, match_threshold = 0.8, region = None):
+        def upgrade_cost_redness_by_resource_icons(screen_img, *, match_threshold = 0.55, region = None):
             '''
 Locate ``multiupgrade.png`` (up to two matches), then measure :meth:`red_hue_fraction`
 in an **80×25-at-baseline** box whose center is **43 px above** each template center
 (scaled to capture size).
 
-One match covers both gold and elixir slots (left / right halves). Two matches are
-treated as separate gold (leftmost) and elixir (rightmost) buttons.
+One match covers single-currency upgrade (checks top-right purple for elixir vs gold).
+Two matches are treated as separate gold (leftmost) and elixir (rightmost) buttons.
 
 Updates :class:`~app.config.Config` from ``screen_img`` so template paths match aspect.
 '''
@@ -774,9 +774,22 @@ Updates :class:`~app.config.Config` from ``screen_img`` so template paths match 
 
             if len(matches) == 1:
                 (left, top, tw, th, conf) = matches[0]
-                half = max(1, tw // 2)
-                gold = for_rect(left, top, half, th, conf)
-                elixir = for_rect(left + half, top, tw - half, th, conf)
+                crop_top = max(0, int(top) - int(center_offset))
+                crop_bot = int(top)
+                crop_left = int(left) + int(tw) // 2
+                crop_right = min(frame_w, int(left) + int(tw))
+                icon_crop = screen_img[crop_top:crop_bot, crop_left:crop_right]
+                has_purple = False
+                if icon_crop.size > 0:
+                    hsv = cv2.cvtColor(icon_crop, cv2.COLOR_BGR2HSV)
+                    purple_px = cv2.countNonZero(cv2.inRange(hsv, (130, 60, 60), (170, 255, 255)))
+                    has_purple = purple_px > 15
+                if has_purple:
+                    gold = miss
+                    elixir = for_rect(*matches[0])
+                else:
+                    gold = for_rect(*matches[0])
+                    elixir = miss
             else:
                 matches = sorted(matches, key = (lambda m: m[0]))
                 gold = for_rect(*matches[0])

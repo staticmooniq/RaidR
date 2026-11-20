@@ -14,7 +14,7 @@ from app.ui.qt.bot_controller import BotController
 from app.ui.qt.dialogs import RankedAttackConfirmDialog, show_bb_prioritise_help, show_error, show_under_development
 from app.ui.qt.strategy_editor import StrategyEditorDialog
 from app.ui.qt.theme import SPACING, TOKENS
-from app.ui.qt.widgets import Card, HelpButton, PageTitle, SectionTitle, StepperButton, ToggleSwitch, chip_button, danger_button, neutral_button, primary_button, segment_button
+from app.ui.qt.widgets import Card, HelpButton, PageTitle, SectionTitle, StepperButton, ToggleSwitch, ThemedSliderRow, chip_button, danger_button, neutral_button, primary_button, segment_button
 from app.utils.common import ensure_dir, get_user_app_data_dir, get_resource_path
 from app.utils.custom_strategy_store import (
     load_strategies, save_strategies, get_strategy_by_id
@@ -485,8 +485,29 @@ class RunPage(QWidget):
         card.card_layout.addWidget(upg_hint)
         self._ranked = ToggleSwitch('Ranked attack fill', parent = card, danger = True)
         card.card_layout.addWidget(self._ranked)
+        hv_wall_row = QHBoxLayout()
+        hv_wall_row.setContentsMargins(0, 0, 0, 0)
+        hv_wall_row.setSpacing(10)
         self._upgrade_walls = ToggleSwitch('Upgrade walls', parent = card)
-        card.card_layout.addWidget(self._upgrade_walls)
+        self._upgrade_walls.setToolTip('Before and after battles, open Build, find a Wall row, add affordable walls, and confirm the upgrade.')
+        hv_wall_row.addWidget(self._upgrade_walls)
+        hv_wall_row.addStretch()
+        self._hv_wall_slider_row = ThemedSliderRow(
+            label = 'Check frequency:',
+            min_val = 1,
+            max_val = 15,
+            default_val = 5,
+            unit = 'battles',
+            slider_width = 120,
+            parent = card
+        )
+        self._upgrade_walls.toggled.connect(self._hv_wall_slider_row.setEnabled)
+        hv_wall_row.addWidget(self._hv_wall_slider_row)
+        card.card_layout.addLayout(hv_wall_row)
+        wall_hint = QLabel('Uses Gold or Elixir when the wall batch is affordable.')
+        wall_hint.setWordWrap(True)
+        wall_hint.setStyleSheet(f"color: {TOKENS['text_muted']};")
+        card.card_layout.addWidget(wall_hint)
         mr_row = QHBoxLayout()
         self._multi_run = ToggleSwitch('Multi-run', parent = card)
         mr_row.addWidget(self._multi_run)
@@ -516,9 +537,25 @@ class RunPage(QWidget):
             prior_row.addWidget(btn)
         prior_row.addStretch()
         card.card_layout.addLayout(prior_row)
+        wall_row = QHBoxLayout()
+        wall_row.setContentsMargins(0, 0, 0, 0)
+        wall_row.setSpacing(10)
         self._bb_upgrade_walls = ToggleSwitch('Upgrade walls', parent = card)
         self._bb_upgrade_walls.setToolTip('Before and after battles, open Build, find a Wall row, add affordable walls, and confirm the upgrade.')
-        card.card_layout.addWidget(self._bb_upgrade_walls)
+        wall_row.addWidget(self._bb_upgrade_walls)
+        wall_row.addStretch()
+        self._bb_wall_slider_row = ThemedSliderRow(
+            label = 'Check frequency:',
+            min_val = 1,
+            max_val = 15,
+            default_val = 5,
+            unit = 'battles',
+            slider_width = 120,
+            parent = card
+        )
+        self._bb_upgrade_walls.toggled.connect(self._bb_wall_slider_row.setEnabled)
+        wall_row.addWidget(self._bb_wall_slider_row)
+        card.card_layout.addLayout(wall_row)
         wall_hint = QLabel('Uses Builder Gold or Builder Elixir only when the wall batch is affordable.')
         wall_hint.setWordWrap(True)
         wall_hint.setStyleSheet(f"color: {TOKENS['text_muted']};")
@@ -569,10 +606,21 @@ class RunPage(QWidget):
         two_star_hint.setWordWrap(True)
         two_star_hint.setStyleSheet(f"color: {TOKENS['text_muted']};")
         card.card_layout.addWidget(two_star_hint)
+        self._bb_return_home_failsafe = ToggleSwitch('Return Home fail-safe', parent=card)
+        self._bb_return_home_failsafe.setChecked(True)
+        self._bb_return_home_failsafe.setToolTip('Multi-scale color contour detector to prevent getting stuck after 0% damage.')
+        card.card_layout.addWidget(self._bb_return_home_failsafe)
+        failsafe_hint = QLabel('Multi-scale color contour detector to prevent getting stuck after 0% damage.')
+        failsafe_hint.setWordWrap(True)
+        failsafe_hint.setStyleSheet(f"color: {TOKENS['text_muted']};")
+        card.card_layout.addWidget(failsafe_hint)
         return card
 
     def is_two_star_enabled(self):
         return self._bb_two_star_toggle.isChecked()
+
+    def is_bb_return_home_failsafe_enabled(self):
+        return self._bb_return_home_failsafe.isChecked()
 
     def is_three_star_enabled(self):
         return self._three_star_toggle.isChecked()
@@ -828,8 +876,13 @@ class RunPage(QWidget):
 
         self._set_auto_upgrade_mode(str(self._settings.value('run/autoUpgrade', 'off')))
         self._upgrade_walls.setChecked(self._settings.value('run/upgradeWalls', False, type = bool))
+        self._hv_wall_slider_row.setValue(self._settings.value('run/hvWallCheckEvery', 5, type = int))
+        self._hv_wall_slider_row.setEnabled(self._upgrade_walls.isChecked())
         self._bb_upgrade_walls.setChecked(self._settings.value('run/bbUpgradeWalls', False, type = bool))
+        self._bb_wall_slider_row.setValue(self._settings.value('run/bbWallCheckEvery', 5, type = int))
+        self._bb_wall_slider_row.setEnabled(self._bb_upgrade_walls.isChecked())
         self._bb_two_star_toggle.setChecked(self._settings.value('run/bbTwoStar', False, type = bool))
+        self._bb_return_home_failsafe.setChecked(self._settings.value('run/bbReturnHomeFailsafe', True, type = bool))
         self._until_maxed.setChecked(self._settings.value('run/untilMaxed', False, type = bool))
         minutes = self._settings.value('run/minutes', 15, type = int)
         if 1 <= minutes <= 999:
@@ -847,8 +900,11 @@ class RunPage(QWidget):
         self._settings.setValue('run/starBonus', self._star_bonus.isChecked())
         self._settings.setValue('run/autoUpgrade', self._get_auto_upgrade_mode())
         self._settings.setValue('run/upgradeWalls', self._upgrade_walls.isChecked())
+        self._settings.setValue('run/hvWallCheckEvery', self._hv_wall_slider_row.value())
         self._settings.setValue('run/bbUpgradeWalls', self._bb_upgrade_walls.isChecked())
+        self._settings.setValue('run/bbWallCheckEvery', self._bb_wall_slider_row.value())
         self._settings.setValue('run/bbTwoStar', self._bb_two_star_toggle.isChecked())
+        self._settings.setValue('run/bbReturnHomeFailsafe', self._bb_return_home_failsafe.isChecked())
         self._settings.setValue('run/untilMaxed', self._until_maxed.isChecked())
         self._settings.setValue('run/minutes', self._minutes_spin.value())
 
@@ -899,7 +955,26 @@ class RunPage(QWidget):
             return None
         self._save_choices()
         custom_data = self._get_custom_strategy_data()
-        self._controller.start(method = method, minutes = mins, star_bonus = star_bonus, ranked_fill = ranked_fill, upgrade_walls = self._bb_upgrade_walls.isChecked() if builder_base else self._upgrade_walls.isChecked(), multi_run_players = multi_arg, builder_base = builder_base, loot_prioritise = self._get_bb_prioritise() if builder_base else 'both', auto_upgrade = 'off' if builder_base else self._get_auto_upgrade_mode(), secondary_troop_template = '', secondary_troop_count = 0, three_star_mode = self.is_three_star_enabled(), rage_spell = self.is_rage_spell_enabled(), two_star_mode = self.is_two_star_enabled() if builder_base else False, custom_strategy_data = custom_data)
+        self._controller.start(
+            method = method,
+            minutes = mins,
+            star_bonus = star_bonus,
+            ranked_fill = ranked_fill,
+            upgrade_walls = self._bb_upgrade_walls.isChecked() if builder_base else self._upgrade_walls.isChecked(),
+            multi_run_players = multi_arg,
+            builder_base = builder_base,
+            loot_prioritise = self._get_bb_prioritise() if builder_base else 'both',
+            auto_upgrade = 'off' if builder_base else self._get_auto_upgrade_mode(),
+            secondary_troop_template = '',
+            secondary_troop_count = 0,
+            three_star_mode = self.is_three_star_enabled(),
+            rage_spell = self.is_rage_spell_enabled(),
+            two_star_mode = self.is_two_star_enabled() if builder_base else False,
+            custom_strategy_data = custom_data,
+            bb_walls_check_every = self._bb_wall_slider_row.value(),
+            bb_return_home_failsafe = self.is_bb_return_home_failsafe_enabled() if builder_base else True,
+            hv_walls_check_every = self._hv_wall_slider_row.value(),
+        )
 
     
     def is_star_bonus_enabled(self):

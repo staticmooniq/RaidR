@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RaidR — Free Clash of Clans Bot for PC | #1 Native CoC Automation</title>
+    <meta name="description" content="Download RaidR, the #1 100% free Clash of Clans PC bot for Google Play Games. Native dual-resource wall dump, auto raid farming, zero emulator bloat, open source.">
+    <meta name="keywords" content="free coc bot, clash of clans bot free, coc bot pc, coc bot no bluestacks, google play games bot, coc wall upgrader, clash bot 2026, free clash of clans bot">
+    <link rel="icon" type="image/x-icon" href="assets/raidr_logo.ico">
+
+    <!-- OpenGraph / Discord Embeds -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="RaidR — Free Native PC Automation for Clash of Clans">
+    <meta property="og:description" content="Automate wall upgrades with Gold & Elixir, farm in the background on Google Play Games PC. 100% Free & Open Source.">
+    <meta property="og:image" content="assets/raidr_logo.png">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Custom High-Craft Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- JSON-LD Structured Data for Google -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "RaidR",
+      "operatingSystem": "Windows 10, Windows 11 (64-bit)",
+      "applicationCategory": "GameApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0.00",
+        "priceCurrency": "USD"
+      },
+      "softwareVersion": "1.2",
+      "description": "Native PC automation assistant for Clash of Clans on Google Play Games PC."
+    }
+    </script>
+</head>
+<body class="selection:bg-emerald-500/30">
+
+    <!-- Interactive Ambient Mouse Spotlight -->
+    <div id="ambient-spotlight" class="ambient-spotlight"></div>
+
+    <!-- Technical Background Grid -->
+    <div class="grid-mesh"></div>
+
+    <!-- Top Navigation Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#080A0D]/85 border-b border-white/[0.07]">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="#" class="flex items-center space-x-2.5 group">
+                <img src="assets/raidr_logo.png" alt="RaidR Logo" class="w-8 h-8 rounded-lg object-contain shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+                <span class="text-xl font-bold tracking-tight">
+                    <span class="text-emerald-400">Raid</span><span class="text-white">R</span>
+                </span>
+                <span class="text-[10px] font-mono font-bold tracking-wider px-2 py-0.5 rounded border border-white/10 text-slate-400 bg-white/5">v1.2</span>
+            </a>
+
+            <nav class="hidden md:flex items-center space-x-7 text-xs font-semibold text-slate-300">
+                <a href="#simulator" class="hover:text-emerald-400 transition-colors">Virtual App</a>
+                <a href="#features" class="hover:text-emerald-400 transition-colors">Architecture</a>
+                <a href="#comparison" class="hover:text-emerald-400 transition-colors">Comparison</a>
+                <a href="#faq" class="hover:text-emerald-400 transition-colors">FAQ</a>
+            </nav>
+
+            <div class="flex items-center space-x-3">
+                <a href="https://github.com/staticmooniq/RaidR" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 transition-all">
+                    <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    <span>GitHub</span>
+                </a>
+                <a href="#download" class="text-xs font-bold px-4 py-2 rounded-lg web-theme-accent-btn text-white transition-all flex items-center space-x-1.5">
+                    <span>Download <span class="live-release-version">v1.2</span></span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="relative z-10 pt-28 pb-20">
+
+        <!-- Hero Section -->
+        <section class="max-w-6xl mx-auto px-6 text-center mb-12">
+            <div class="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full web-theme-badge border text-xs font-semibold mb-6">
+                <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                <span class="live-hero-badge"><span class="live-release-version">v1.2</span> Live: Native PC Automation for Clash of Clans</span>
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight mb-5 max-w-4xl mx-auto text-white leading-[1.08] font-clash">
+                Automate Your Village <br><span id="hero-gradient-text" class="hero-headline-gradient">While You Sleep.</span>
+            </h1>
+
+            <p class="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto mb-8 leading-relaxed font-normal">
+                The native PC automation assistant for Google Play Games. Farm resources twice as fast compared to manual grinding, stack millions in loot unattended, and let it run silently in the background.
+            </p>
+
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10">
+                <a href="#features" class="web-theme-accent-btn w-full sm:w-auto px-8 py-3.5 rounded-xl text-white font-bold text-sm shadow-xl transition-all flex items-center justify-center space-x-2 group">
+                    <span>Features</span>
+                    <svg class="w-4 h-4 fill-none stroke-current transform group-hover:translate-y-0.5 transition-transform" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M19 9l-7 7-7-7"/></svg>
+                </a>
+                <a href="#simulator" class="hidden md:flex w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/30 text-slate-200 font-semibold text-sm transition-all items-center justify-center space-x-1.5">
+                    <span>Try Interactive Virtual App</span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </a>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-slate-400 font-mono">
+                <div class="flex items-center gap-1.5">
+                    <span class="text-emerald-400">✓</span>
+                    <span>100% Free & Open Source</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-emerald-400">✓</span>
+                    <span>Windows 10 / 11 Native</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-emerald-400">✓</span>
+                    <span>VirusTotal 0/72 Clean</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-emerald-400">✓</span>
+                    <span>Runs Minimized / Behind Windows</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- -------------------------------------------------------------
+         * HERO VISUAL: 1:1 PIXEL-PERFECT INTERACTIVE SIMULATION OF RAIDR (HIDDEN ON MOBILE)
+         * ------------------------------------------------------------- -->
+        <section id="simulator" class="hidden md:block max-w-5xl mx-auto px-6 mb-28">
+            <div class="text-center mb-6">
+                <span class="text-[11px] font-mono font-bold text-emerald-400 uppercase tracking-widest">Interactive Desktop Interface</span>
+                <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1.5 font-clash">Experience the Real RaidR UI in Your Browser</h2>
+                <p class="text-xs sm:text-sm text-slate-400 mt-2 max-w-xl mx-auto">Every button, switch, and menu is interactive. Go to <span class="text-emerald-400 font-semibold cursor-pointer hover:underline" onclick="document.getElementById('tab-btn-settings').click()">Settings</span> to change the live theme!</p>
+            </div>
+
+            <!-- Virtual Desktop Window Root -->
+            <div id="virtual-app-root" class="virtual-app-root virtual-app-window">
+                
+                <!-- Windows OS Titlebar -->
+                <div class="os-titlebar">
+                    <div class="os-titlebar-left">
+                        <img src="assets/raidr_logo.png" alt="RaidR Icon" class="os-app-icon">
+                        <span>RaidR</span>
+                    </div>
+                    <div class="os-window-controls">
+                        <button id="btn-win-min" class="os-win-btn" title="Minimize (Simulated)" type="button">
+                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 10 10"><path stroke-linecap="round" stroke-width="1.5" d="M1 5h8"/></svg>
+                        </button>
+                        <button id="btn-win-max" class="os-win-btn" title="Maximize / Restore" type="button">
+                            <svg id="svg-win-max" class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 10 10"><path stroke-width="1.2" d="M1.5 1.5h7v7h-7z"/></svg>
+                        </button>
+                        <button id="btn-win-close" class="os-win-btn os-win-close" title="Close to Tray" type="button">
+                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 10 10"><path stroke-linecap="round" stroke-width="1.5" d="M1 1l8 8M9 1L1 9"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bot Top Navigation Bar -->
+                <div class="app-navbar">
+                    <div class="flex items-center gap-4">
+                        <div class="app-brand-badge">
+                            <img src="assets/raidr_logo.png" alt="RaidR Icon" class="app-brand-icon-img">
+                            <div class="app-brand-text">
+                                <span class="app-brand-raid">Raid</span><span class="app-brand-r">R</span>
+                            </div>
+                        </div>
+
+                        <!-- Main Navigation Tabs -->
+                        <div class="app-nav-tabs">
+                            <button id="tab-btn-run" class="app-tab-btn app-nav-tab active" data-page="run" type="button">Run</button>
+                            <button id="tab-btn-settings" class="app-tab-btn app-nav-tab" data-page="settings" type="button">Settings</button>
+                            <button id="tab-btn-logs" class="app-tab-btn app-nav-tab" data-page="logs" type="button">Logs</button>
+                        </div>
+                    </div>
+
+                    <div class="app-header-utilities">
+                        <a href="https://discord.gg/TWwc4W6eMq" target="_blank" rel="noopener noreferrer" class="app-discord-btn" title="Join RaidR Discord">
+                            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+                            <span>Join Discord</span>
+                        </a>
+                        <button id="btn-launch-game" class="app-launch-btn" type="button" title="Launch Google Play Games PC">
+                            <span class="text-purple-400">🎮</span>
+                            <span>Launch Game</span>
+                        </button>
+                        <!-- Village Switcher in Navbar -->
+                        <div class="app-navbar-village-group">
+                            <button id="navbar-village-hv" class="app-village-btn active" type="button">Home Village</button>
+                            <button id="navbar-village-bb" class="app-village-btn" type="button">Builder Base</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Viewport Body -->
+                <div class="app-viewport">
+                    
+                    <!-- -------------------------------------------------------------
+                     * PAGE 1: RUN PAGE (MATCHING SCREENSHOTS 4, 5, 8, 9)
+                     * ------------------------------------------------------------- -->
+                    <div id="page-run" class="app-page-view space-y-3.5">
+                        
+                        <!-- 1. ATTACK STRATEGY CARD -->
+                        <div class="app-card">
+                            <div class="app-card-title">Attack Strategy</div>
+                            
+                            <!-- Home Village Strategies -->
+                            <div class="village-hv-only app-strategy-row">
+                                <div class="app-strategy-buttons relative">
+                                    <div class="relative inline-block">
+                                        <button id="hv-strat-dropdown-btn" class="app-btn-pill app-strategy-select-btn active flex items-center gap-1.5" type="button">
+                                            <span id="hv-strat-name">Edrags ★</span>
+                                            <svg class="w-2.5 h-2.5 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 10 6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M1 1l4 4 4-4"/></svg>
+                                        </button>
+                                        
+                                        <!-- Strategy Dropdown Menu (matching screenshot) -->
+                                        <div id="hv-strat-menu" class="hv-strat-dropdown-menu hidden">
+                                            <button class="hv-strat-menu-item active" data-strategy="Edrags ★" data-troop="edrag" data-count="x12" data-name="Electro Dragon" type="button">Edrags ★</button>
+                                            <button class="hv-strat-menu-item" data-strategy="Valkyries" data-troop="valkyrie" data-count="x24" data-name="Valkyrie" type="button">Valkyries</button>
+                                            <button class="hv-strat-menu-item" data-strategy="Sneaky Goblins" data-troop="goblin" data-count="x90" data-name="Sneaky Goblin" type="button">Sneaky Goblins</button>
+                                            <button class="hv-strat-menu-item" data-strategy="Super Minions" data-troop="minion" data-count="x20" data-name="Super Minion" type="button">Super Minions</button>
+                                            <button class="hv-strat-menu-item" data-strategy="Yeti ★" data-troop="yeti" data-count="x10" data-name="Yeti" type="button">Yeti ★</button>
+                                        </div>
+                                    </div>
+
+                                    <button class="app-btn-pill" type="button">+ New Strategy</button>
+                                    <button class="app-btn-pill" type="button">Edit Strategy</button>
+                                    <button class="app-btn-pill app-btn-delete" type="button">Delete</button>
+                                </div>
+                                <div id="hv-troop-badge" class="app-troop-badge">
+                                    <img id="hv-troop-img" src="assets/edrag.png" alt="Electro Dragon" class="app-troop-icon">
+                                    <span id="hv-troop-text" class="text-xs font-mono font-bold text-sky-300">Electro Dragon <span class="text-white">x12</span></span>
+                                </div>
+                            </div>
+
+                            <!-- Builder Base Strategies -->
+                            <div class="village-bb-only hidden app-strategy-row">
+                                <div class="app-strategy-buttons">
+                                    <button id="bb-strat-babydragon" class="app-btn-pill app-strategy-select-btn" data-bb-troop="babydragon" type="button">Baby Dragon</button>
+                                    <button id="bb-strat-nightwitch" class="app-btn-pill app-strategy-select-btn active" data-bb-troop="nightwitch" type="button">Night Witches</button>
+                                </div>
+                                <div id="bb-troop-badge" class="app-troop-badge border border-purple-500/30">
+                                    <img id="bb-troop-img" src="assets/nightwitch.png" alt="Night Witch" class="app-troop-icon">
+                                    <span id="bb-troop-text" class="text-xs font-mono font-bold text-purple-300">Night Witch <span class="text-white">x6</span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. SCHEDULE CARD -->
+                        <div class="app-card">
+                            <div class="app-card-title">Schedule</div>
+                            <div class="space-y-1">
+                                <div class="app-switch-row">
+                                    <div class="app-switch-meta">
+                                        <h4>Star Bonus</h4>
+                                    </div>
+                                    <div class="app-toggle"></div>
+                                </div>
+
+                                <div class="app-switch-row">
+                                    <div class="app-switch-meta">
+                                        <h4>Run until maxed (no time limit)</h4>
+                                        <p>Farms, upgrades, and idles in a loop until you press Stop. When storages are full and nothing can be started, the bot waits and rechecks every 5 minutes instead of attacking for nothing.</p>
+                                    </div>
+                                    <div class="app-toggle active"></div>
+                                </div>
+
+                                <div class="flex items-center gap-4 pt-2">
+                                    <span class="text-[11px] font-bold tracking-wider text-slate-400 uppercase">Duration</span>
+                                    <div class="app-stepper-box">
+                                        <input id="app-duration-input" type="text" value="123" class="app-stepper-val" readonly>
+                                        <div class="app-stepper-arrows">
+                                            <button id="app-duration-up" class="app-step-btn">▲</button>
+                                            <button id="app-duration-down" class="app-step-btn">▼</button>
+                                        </div>
+                                    </div>
+                                    <span class="text-xs text-slate-400">minutes</span>
+                                    <div class="flex items-center gap-1.5 ml-2">
+                                        <button class="app-btn-pill app-duration-pill text-[11px] py-1 px-2.5" data-min="5">5m</button>
+                                        <button class="app-btn-pill app-duration-pill text-[11px] py-1 px-2.5" data-min="10">10m</button>
+                                        <button class="app-btn-pill app-duration-pill text-[11px] py-1 px-2.5" data-min="20">20m</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. MODES CARD (HOME VILLAGE) -->
+                        <div class="village-hv-only app-card space-y-2">
+                            <div class="app-card-title">Modes</div>
+                            
+                            <div class="flex items-center gap-3">
+                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Auto Upgrade</span>
+                                <div class="app-radio-group flex items-center gap-1.5">
+                                    <button class="app-btn-pill app-radio-btn active text-xs py-1 px-3">Off</button>
+                                    <button class="app-btn-pill app-radio-btn text-xs py-1 px-3">Dry run</button>
+                                    <button class="app-btn-pill app-radio-btn text-xs py-1 px-3">Maxer</button>
+                                    <button class="app-btn-pill app-radio-btn text-xs py-1 px-3">Rusher</button>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-slate-400 leading-relaxed">Maxer starts the cheapest affordable upgrade with your loot (never the Town Hall); Rusher grabs the Town Hall the moment it is affordable. Dry run only logs what it would start. Works at any Town Hall level. Reserve builders for walls in Settings.</p>
+
+                            <div class="app-switch-row pt-1">
+                                <div class="app-switch-meta">
+                                    <h4>Ranked attack fill</h4>
+                                </div>
+                                <div class="app-toggle"></div>
+                            </div>
+
+                            <div class="app-switch-row">
+                                <div class="app-switch-meta">
+                                    <h4>Upgrade walls</h4>
+                                    <p>Uses Gold or Elixir when the wall batch is affordable.</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <div class="app-slider-wrap">
+                                        <span class="text-[11px] text-slate-400">Check frequency:</span>
+                                        <input id="hv-wall-slider" type="range" min="1" max="15" value="3" class="app-themed-slider">
+                                        <span id="hv-wall-badge" class="app-slider-badge">Every 3 battles</span>
+                                    </div>
+                                    <div class="app-toggle active"></div>
+                                </div>
+                            </div>
+
+                            <div class="app-switch-row">
+                                <div class="app-switch-meta">
+                                    <h4>Multi-run</h4>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <button class="app-btn-pill text-xs py-1 px-3">Edit player list</button>
+                                    <div class="app-toggle"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. MODES CARD (BUILDER BASE) -->
+                        <div class="village-bb-only hidden app-card space-y-2">
+                            <div class="app-card-title">Modes</div>
+                            
+                            <div class="flex items-center gap-3">
+                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                    <span>Prioritise</span>
+                                    <span class="text-[10px] text-slate-500 cursor-help" title="Select preferred resource for wall upgrades">(?)</span>
+                                </span>
+                                <div class="app-radio-group flex items-center gap-1.5">
+                                    <button class="app-btn-pill app-radio-btn active text-xs py-1 px-3">Gold</button>
+                                    <button class="app-btn-pill app-radio-btn text-xs py-1 px-3">Both</button>
+                                    <button class="app-btn-pill app-radio-btn text-xs py-1 px-3">Elixir</button>
+                                </div>
+                            </div>
+
+                            <div class="app-switch-row pt-1">
+                                <div class="app-switch-meta">
+                                    <h4>Upgrade walls</h4>
+                                    <p>Uses Builder Gold or Builder Elixir only when the wall batch is affordable.</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <div class="app-slider-wrap">
+                                        <span class="text-[11px] text-slate-400">Check frequency:</span>
+                                        <input id="bb-wall-slider" type="range" min="1" max="15" value="3" class="app-themed-slider">
+                                        <span id="bb-wall-badge" class="app-slider-badge">Every 3 battles</span>
+                                    </div>
+                                    <div class="app-toggle active"></div>
+                                </div>
+                            </div>
+
+                            <div class="app-switch-row">
+                                <div class="app-switch-meta">
+                                    <h4>Multi-run</h4>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <button class="app-btn-pill text-xs py-1 px-3">Edit player list</button>
+                                    <div class="app-toggle"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. EXTRAS CARD (HOME VILLAGE) -->
+                        <div class="village-hv-only app-card space-y-1">
+                            <div class="app-card-title">Extras</div>
+                            
+                            <div class="app-switch-row">
+                                <div class="app-switch-meta">
+                                    <h4>3 Star — end battle only after 3 stars</h4>
+                                </div>
+                                <div class="app-toggle active"></div>
+                            </div>
+
+                            <div class="app-switch-row">
+                                <div class="app-switch-meta">
+                                    <h4>Rage Spell — use rage instead of earthquake</h4>
+                                </div>
+                                <div class="app-toggle active"></div>
+                            </div>
+                        </div>
+
+                        <!-- 4. EXTRAS CARD (BUILDER BASE) -->
+                        <div class="village-bb-only hidden app-card space-y-1">
+                            <div class="app-card-title">Extras</div>
+                            
+                            <div class="app-switch-row">
+                                <div class="app-switch-meta">
+                                    <h4>End after 2 stars</h4>
+                                    <p>When off, the bot follows the normal Builder Base battle sequence.</p>
+                                </div>
+                                <div class="app-toggle active"></div>
+                            </div>
+
+                            <div class="app-switch-row">
+                                <div class="app-switch-meta">
+                                    <h4>Return Home fail-safe</h4>
+                                    <p>Multi-scale color contour detector to prevent getting stuck after 0% damage.</p>
+                                </div>
+                                <div class="app-toggle active"></div>
+                            </div>
+                        </div>
+
+                        <!-- 5. LIVE STATUS CARD -->
+                        <div class="app-card">
+                            <div class="app-card-title">Live Status</div>
+                            <div class="app-status-grid">
+                                <div class="app-status-cell">
+                                    <div class="app-status-label">State</div>
+                                    <div id="live-metric-state" class="app-status-value">Ready</div>
+                                </div>
+                                <div class="app-status-cell">
+                                    <div class="app-status-label">Builders Free</div>
+                                    <div class="app-status-value">—</div>
+                                </div>
+                                <div class="app-status-cell">
+                                    <div class="app-status-label">Lab Free</div>
+                                    <div class="app-status-value">—</div>
+                                </div>
+                                <div class="app-status-cell">
+                                    <div class="app-status-label">Storages</div>
+                                    <div class="app-status-value">—</div>
+                                </div>
+                            </div>
+
+                            <div class="app-status-grid-2">
+                                <div class="app-status-cell">
+                                    <div class="app-status-label">Loot This Session</div>
+                                    <div id="live-metric-loot" class="app-status-value text-emerald-400">—</div>
+                                </div>
+                                <div class="app-status-cell">
+                                    <div class="app-status-label">Loot / Hour</div>
+                                    <div id="live-metric-rate" class="app-status-value text-sky-400">—</div>
+                                </div>
+                            </div>
+                            <p class="text-[10.5px] text-slate-500">Start the bot to see live village state here. Builders / lab / storages update while Auto upgrade is on.</p>
+                        </div>
+                    </div>
+
+                    <!-- -------------------------------------------------------------
+                     * PAGE 2: SETTINGS PAGE (MATCHING SCREENSHOTS 6 & 7)
+                     * ------------------------------------------------------------- -->
+                    <div id="page-settings" class="app-page-view hidden space-y-3.5">
+                        <div class="text-base font-bold text-white mb-1">Settings</div>
+
+                        <!-- Theme & Color Presets Card -->
+                        <div class="app-card">
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="app-card-title">Theme & Color Presets</div>
+                                <span id="app-theme-preview" class="text-xs font-mono font-bold text-emerald-400">Emerald Green Active</span>
+                            </div>
+                            <p class="app-card-desc mb-3">Customize the accent glow and button styling across the entire bot controller UI.</p>
+                            
+                            <select id="app-theme-select" class="app-select">
+                                <option value="Emerald Green">Emerald Green</option>
+                                <option value="Electric Blue">Electric Blue</option>
+                                <option value="Cyber Purple">Cyber Purple</option>
+                                <option value="Crimson Sunset">Crimson Sunset</option>
+                                <option value="Amber Gold">Amber Gold</option>
+                                <option value="Minimal Monochrome">Minimal Monochrome</option>
+                                <option value="Pure Pitch Black">Pure Pitch Black</option>
+                                <option value="Deep Midnight Navy">Deep Midnight Navy</option>
+                            </select>
+
+                            <!-- Fast One-Click Color Swatches -->
+                            <div class="theme-chips-row">
+                                <button class="theme-chip-btn active" data-theme="Emerald Green">
+                                    <span class="theme-chip-dot bg-[#10B981]"></span>
+                                    <span>Emerald Green</span>
+                                </button>
+                                <button class="theme-chip-btn" data-theme="Electric Blue">
+                                    <span class="theme-chip-dot bg-[#2693FF]"></span>
+                                    <span>Electric Blue</span>
+                                </button>
+                                <button class="theme-chip-btn" data-theme="Cyber Purple">
+                                    <span class="theme-chip-dot bg-[#A855F7]"></span>
+                                    <span>Cyber Purple</span>
+                                </button>
+                                <button class="theme-chip-btn" data-theme="Amber Gold">
+                                    <span class="theme-chip-dot bg-[#F59E0B]"></span>
+                                    <span>Amber Gold</span>
+                                </button>
+                                <button class="theme-chip-btn" data-theme="Crimson Sunset">
+                                    <span class="theme-chip-dot bg-[#F43F5E]"></span>
+                                    <span>Crimson Sunset</span>
+                                </button>
+                                <button class="theme-chip-btn" data-theme="Deep Midnight Navy">
+                                    <span class="theme-chip-dot bg-[#00D2FF]"></span>
+                                    <span>Deep Midnight</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- In-Game Touch Overlay -->
+                        <div class="app-card">
+                            <div class="app-card-title">In-Game Touch Overlay</div>
+                            <div class="app-switch-row">
+                                <div class="app-switch-meta">
+                                    <h4>Show touch ripples in game</h4>
+                                    <p>Displays transparent click-through glow animations on top of Clash of Clans to visualize where the bot clicks and drags.</p>
+                                </div>
+                                <div class="app-toggle"></div>
+                            </div>
+                        </div>
+
+                        <!-- Multi-Run Player Rotation -->
+                        <div class="app-card">
+                            <div class="app-card-title">Multi-Run Player Rotation</div>
+                            <p class="app-card-desc mb-3">Add account usernames to automatically rotate through during Multi-Run farming. Order is rotation order (▲▼). Run = farm this account; Skip = ignore.</p>
+                            <button class="app-btn-pill text-xs py-1.5 px-3.5">+ Add Player</button>
+                        </div>
+
+                        <!-- Earthquake Placement -->
+                        <div class="app-card">
+                            <div class="app-card-title">Earthquake Placement</div>
+                            <select class="app-select">
+                                <option>Curve Placement</option>
+                                <option>Center Placement</option>
+                                <option>Outer Ring Placement</option>
+                            </select>
+                        </div>
+
+                        <!-- Wall Upgrade Threshold -->
+                        <div class="app-card">
+                            <div class="app-card-title">Wall Upgrade Threshold</div>
+                            <p class="app-card-desc mb-2">With "Upgrade walls" on, upgrade as soon as gold or elixir reaches this amount - before storages fill up and raids stop earning. 0 = only upgrade when storages are full.</p>
+                            <div class="flex items-center gap-2">
+                                <input type="text" value="3M" class="app-stepper-val bg-black/40 border border-white/10 rounded px-2 py-1 text-xs w-16 text-center">
+                                <span class="text-xs text-slate-400">gold or elixir</span>
+                            </div>
+                        </div>
+
+                        <!-- Upgrade Order -->
+                        <div class="app-card">
+                            <div class="app-card-title">Upgrade Order</div>
+                            <p class="app-card-desc mb-2">Priciest first soaks full storages into the biggest jobs (best when the bot farms loot faster than builders free up). Dark elixir upgrades (heroes) always get first claim either way.</p>
+                            <select class="app-select">
+                                <option>Priciest first</option>
+                                <option>Cheapest first</option>
+                                <option>Fastest timer first</option>
+                            </select>
+                        </div>
+
+                        <!-- Reserve Builders -->
+                        <div class="app-card">
+                            <div class="app-card-title">Reserve Builders</div>
+                            <p class="app-card-desc mb-2">With Auto upgrade on, keep this many builders free (the wall flow spends through them). Set 0 when your walls are maxed so every builder is used for upgrades.</p>
+                            <div class="flex items-center gap-2">
+                                <input type="number" value="1" class="app-stepper-val bg-black/40 border border-white/10 rounded px-2 py-1 text-xs w-16 text-center">
+                                <span class="text-xs text-slate-400">builders</span>
+                            </div>
+                        </div>
+
+                        <!-- Matchmaking & Attack Settings -->
+                        <div class="app-card">
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="app-card-title">Matchmaking & Attack Settings</div>
+                                <button class="app-btn-pill active text-xs py-1 px-4">Save settings</button>
+                            </div>
+                            <p class="app-card-desc mb-3">Automatically reads available raid loot during Home Village matchmaking and clicks "Next" until a target meeting your criteria is found. Set amounts to 0 to attack without skipping.</p>
+                            
+                            <div class="space-y-2.5 text-xs">
+                                <div>
+                                    <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Match Priority:</label>
+                                    <select class="app-select">
+                                        <option>Match All (Gold AND Elixir AND DE)</option>
+                                        <option>Match Any (Gold OR Elixir)</option>
+                                        <option>Gold Only</option>
+                                        <option>Elixir Only</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Minimum Gold:</label>
+                                        <input type="text" value="0k" class="app-select">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Minimum Elixir:</label>
+                                        <input type="text" value="0k" class="app-select">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Max Next Skips:</label>
+                                        <input type="number" value="50" class="app-select">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Post-1-Star Loot Delay:</label>
+                                        <input type="text" value="20s" class="app-select">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Game Window Selection -->
+                        <div class="app-card">
+                            <div class="app-card-title">Game Window</div>
+                            <p class="app-card-desc mb-2">RaidR auto-detects the Clash of Clans window by default. If it attaches to the wrong window, select the game window below and click "Use selected".</p>
+                            <div class="bg-black/40 border border-white/10 rounded p-2 text-xs font-mono text-slate-400 space-y-1">
+                                <div class="text-emerald-400">✓ Using auto-detect.</div>
+                                <div>BasePilot master File Explorer — no game surface (CabinetWClass)</div>
+                                <div>RaidR — no game surface (Qt6112QWindowIcon)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- -------------------------------------------------------------
+                     * PAGE 3: LOGS PAGE (MATCHING SCREENSHOT 8)
+                     * ------------------------------------------------------------- -->
+                    <div id="page-logs" class="app-page-view hidden space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="text-base font-bold text-white">Logs</div>
+                            <div class="flex items-center gap-2">
+                                <button class="app-btn-pill text-xs py-1 px-3">Open in Explorer</button>
+                                <button id="app-clear-logs-btn" class="app-btn-pill text-xs py-1 px-3">Clear view</button>
+                            </div>
+                        </div>
+
+                        <div id="app-terminal-logs" class="app-logs-terminal">
+                            <div><span class="log-time">2026-11-20 15:00:10</span> - <span class="log-src">WindowService</span> - <span class="log-level">INFO</span> - <span class="log-msg">Attached to Clash of Clans (Google Play Games PC)</span></div>
+                            <div><span class="log-time">2026-11-20 15:00:11</span> - <span class="log-src">Config</span> - <span class="log-level">INFO</span> - <span class="log-msg">Loaded config profile 16_9 (ref 2560x1440): data.json</span></div>
+                            <div><span class="log-time">2026-11-20 15:00:12</span> - <span class="log-src">TaskbarThumb</span> - <span class="log-level">INFO</span> - <span class="log-msg">Taskbar thumbnail toolbar initialized</span></div>
+                            <div><span class="log-time">2026-11-20 15:00:15</span> - <span class="log-src">BotController</span> - <span class="log-level">INFO</span> - <span class="log-msg">Ready for execution. Click 'Start bot' to begin.</span></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Pinned Bottom Run Action Bar (Visible when Run tab is active) -->
+                <div id="app-run-dock" class="app-run-dock">
+                    <button id="app-start-btn" class="app-btn-start" type="button">
+                        <span class="app-btn-start-icon text-xs">▶</span>
+                        <span id="app-start-btn-text">Start bot</span>
+                    </button>
+                    <button id="app-stop-btn" class="app-btn-stop" type="button">
+                        <span id="app-stop-btn-text">Stop bot</span>
+                    </button>
+                </div>
+
+                <!-- Bottom Status Bar -->
+                <div class="app-footer-bar">
+                    <div class="app-footer-ready">
+                        <span class="app-footer-beacon"></span>
+                        <span id="app-footer-state-text">Ready</span>
+                    </div>
+                    <span>Google Play Games (PC)</span>
+                </div>
+
+                <!-- In-App Notification Toast (Simulated OS/Tray feedback) -->
+                <div id="app-toast" class="app-toast hidden">
+                    <span id="app-toast-icon">ℹ️</span>
+                    <span id="app-toast-msg" class="text-xs">Notification message</span>
+                </div>
+
+            </div>
+
+            <!-- Minimized Floating Taskbar Dock (Appears when window is minimized) -->
+            <div id="minimized-taskbar-dock" class="taskbar-dock hidden">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <img src="assets/raidr_logo.png" alt="RaidR Icon" class="w-4 h-4 object-contain">
+                <span>RaidR (Minimized to Tray)</span>
+                <span class="text-xs text-slate-400 font-mono pl-1">— Click to restore</span>
+            </div>
+        </section>
+
+        <!-- -------------------------------------------------------------
+         * TECHNICAL HIGHLIGHTS & ARCHITECTURE (INFINITE MOMENTUM CAROUSEL STRIP)
+         * ------------------------------------------------------------- -->
+        <section id="features" class="relative w-full overflow-hidden py-6 mb-28 select-none">
+            <div class="max-w-6xl mx-auto px-6 text-center mb-10">
+                <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest">Engineering & Performance</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1">Official Google PC Runtime. Zero Third-Party Bloat.</h2>
+                <p class="text-xs sm:text-sm text-slate-400 mt-2 max-w-xl mx-auto">Why run an unauthorized 5 GB Android emulator riddled with ads when you can automate directly on Supercell's official Google Play Games PC client?</p>
+            </div>
+
+            <!-- Carousel Viewport with Grab Cursor & Edge Fade Shaders -->
+            <div id="features-carousel-viewport" class="carousel-viewport relative w-full overflow-hidden cursor-grab active:cursor-grabbing touch-pan-y">
+                <!-- Left and Right Gradient Fades for depth blending -->
+                <div class="carousel-fade-left pointer-events-none absolute left-0 top-0 bottom-0 w-16 sm:w-36 z-20"></div>
+                <div class="carousel-fade-right pointer-events-none absolute right-0 top-0 bottom-0 w-16 sm:w-36 z-20"></div>
+
+                <!-- Infinite Track containing 2 sets of the 6 cards -->
+                <div id="features-carousel-track" class="carousel-track flex items-stretch gap-5 will-change-transform py-4 px-2">
+                    <!-- SET 1 -->
+                    <!-- Card 01 -->
+                    <div class="parallax-card-3d carousel-card w-[340px] sm:w-[380px] flex-shrink-0 p-7" data-tilt>
+                        <div class="card-3d-content">
+                            <div class="card-3d-tag flex items-center justify-between mb-5">
+                                <span class="text-[10px] font-mono tracking-widest text-emerald-400 font-bold uppercase">01 // DIRECT HOOK</span>
+                                <span class="w-2 h-2 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                            </div>
+                            <h3 class="card-3d-title text-base sm:text-lg font-bold text-white mb-3 tracking-tight">Direct Windows Surface Capture</h3>
+                            <p class="card-3d-desc text-xs text-slate-400 leading-relaxed mb-4">Interfaces directly with the DirectX presentation surface of Google Play Games PC via Win32 APIs. The bot client runs at sub-15ms frame cycles with under 2% CPU overhead.</p>
+                            <div class="card-3d-bar h-1 w-12 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
+                        </div>
+                    </div>
+
+                    <!-- Card 02 -->
+                    <div class="parallax-card-3d carousel-card w-[340px] sm:w-[380px] flex-shrink-0 p-7" data-tilt>
+                        <div class="card-3d-content">
+                            <div class="card-3d-tag flex items-center justify-between mb-5">
+                                <span class="text-[10px] font-mono tracking-widest text-emerald-400 font-bold uppercase">02 // WALL ENGINE</span>
+                                <span class="w-2 h-2 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                            </div>
+                            <h3 class="card-3d-title text-base sm:text-lg font-bold text-white mb-3 tracking-tight">Dual-Village Wall Upgrades</h3>
+                            <p class="card-3d-desc text-xs text-slate-400 leading-relaxed mb-4">Upgrades walls in both Home Village and Builder Base. Dynamically evaluates Gold vs Elixir affordability with intelligent batch pacing between raid cycles.</p>
+                            <div class="card-3d-bar h-1 w-12 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
+                        </div>
+                    </div>
+
+                    <!-- Card 03 -->
+                    <div class="parallax-card-3d carousel-card w-[340px] sm:w-[380px] flex-shrink-0 p-7" data-tilt>
+                        <div class="card-3d-content">
+                            <div class="card-3d-tag flex items-center justify-between mb-5">
+                                <span class="text-[10px] font-mono tracking-widest text-emerald-400 font-bold uppercase">03 // STEALTH SYSTEM</span>
+                                <span class="w-2 h-2 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                            </div>
+                            <h3 class="card-3d-title text-base sm:text-lg font-bold text-white mb-3 tracking-tight">Background Stealth Execution</h3>
+                            <p class="card-3d-desc text-xs text-slate-400 leading-relaxed mb-4">Uses asynchronous Windows PostMessage input routing. You can cover the Clash of Clans window, minimize it, or browse the web while RaidR continues farming.</p>
+                            <div class="card-3d-bar h-1 w-12 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
+                        </div>
+                    </div>
+
+                    <!-- Card 04 -->
+                    <div class="parallax-card-3d carousel-card w-[340px] sm:w-[380px] flex-shrink-0 p-7" data-tilt>
+                        <div class="card-3d-content">
+                            <div class="card-3d-tag flex items-center justify-between mb-5">
+                                <span class="text-[10px] font-mono tracking-widest text-emerald-400 font-bold uppercase">04 // INTELLIGENCE</span>
+                                <span class="w-2 h-2 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                            </div>
+                            <h3 class="card-3d-title text-base sm:text-lg font-bold text-white mb-3 tracking-tight">Smart Dead-Base Filtering</h3>
+                            <p class="card-3d-desc text-xs text-slate-400 leading-relaxed mb-4">Reads OCR values for Gold, Elixir, and Dark Elixir during matchmaking. Skips active bases until high-loot dead collector bases are identified.</p>
+                            <div class="card-3d-bar h-1 w-12 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
+                        </div>
+                    </div>
+
+                    <!-- Card 05 -->
+                    <div class="parallax-card-3d carousel-card w-[340px] sm:w-[380px] flex-shrink-0 p-7" data-tilt>
+                        <div class="card-3d-content">
+                            <div class="card-3d-tag flex items-center justify-between mb-5">
+                                <span class="text-[10px] font-mono tracking-widest text-emerald-400 font-bold uppercase">05 // COLOR ENGINE</span>
+                                <span class="w-2 h-2 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                            </div>
+                            <h3 class="card-3d-title text-base sm:text-lg font-bold text-white mb-3 tracking-tight">8 Handcrafted Themes</h3>
+                            <p class="card-3d-desc text-xs text-slate-400 leading-relaxed mb-4">Built with a complete dynamic palette system. Switch between Emerald Green, Electric Blue, Cyber Purple, Amber Gold, and more with zero restart.</p>
+                            <div class="card-3d-bar h-1 w-12 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
+                        </div>
+                    </div>
+
+                    <!-- Card 06 -->
+                    <div class="parallax-card-3d carousel-card w-[340px] sm:w-[380px] flex-shrink-0 p-7" data-tilt>
+                        <div class="card-3d-content">
+                            <div class="card-3d-tag flex items-center justify-between mb-5">
+                                <span class="text-[10px] font-mono tracking-widest text-emerald-400 font-bold uppercase">06 // FREEDOM</span>
+                                <span class="w-2 h-2 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                            </div>
+                            <h3 class="card-3d-title text-base sm:text-lg font-bold text-white mb-3 tracking-tight">100% Free & Open Source</h3>
+                            <p class="card-3d-desc text-xs text-slate-400 leading-relaxed mb-4">No subscriptions, no hidden tokens, and no remote telemetry. Built transparently with Python, OpenCV, and Qt for Windows.</p>
+                            <div class="card-3d-bar h-1 w-12 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
+                        </div>
+                    </div>
+
+                    <!-- SET 2 (SEAMLESS INFINITE WRAP DUPLICATE) -->
+                    <!-- Card 01 Duplicate -->
+                    <div class="parallax-card-3d carousel-card w-[340px] sm:w-[380px] flex-shrink-0 p-7" data-tilt>
+                        <div class="card-3d-content">
+                            <div class="card-3d-tag flex items-center justify-between mb-5">
+                                <span class="text-[10px] font-mono tracking-widest text-emerald-400 font-bold uppercase">01 // DIRECT HOOK</span>
+                                <span class="w-2 h-2 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                            </div>
+                            <h3 class="card-3d-title text-base sm:text-lg font-bold text-white mb-3 tracking-tight">Direct Windows Surface Capture</h3>
+                            <p class="card-3d-desc text-xs text-slate-400 leading-relaxed mb-4">Interfaces directly with the DirectX presentation surface of Google Play Games PC via Win32 APIs. The bot client runs at sub-15ms frame cycles with under 2% CPU overhead.</p>
+                            <div class="card-3d-bar h-1 w-12 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
+                        </div>
+                    </div>
+
+                    <!-- Card 02 Duplicate -->
+                    <div class="parallax-card-3d carousel-card w-[340px] sm:w-[380px] flex-shrink-0 p-7" data-tilt>
+                        <div class="card-3d-content">
+                            <div class="card-3d-tag flex items-center justify-between mb-5">
+                                <span class="text-[10px] font-mono tracking-widest text-emerald-400 font-bold uppercase">02 // WALL ENGINE</span>
+                                <span class="w-2 h-2 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                            </div>
+                            <h3 class="card-3d-title text-base sm:text-lg font-bold text-white mb-3 tracking-tight">Dual-Village Wall Upgrades</h3>
+                            <p class="card-3d-desc text-xs text-slate-400 leading-relaxed mb-4">Upgrades walls in both Home Village and Builder Base. Dynamically evaluates Gold vs Elixir affordability with intelligent batch pacing between raid cycles.</p>
+                            <div class="card-3d-bar h-1 w-12 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
+                        </div>
+                    </div>
+
+                    <!-- Card 03 Duplicate -->
+                    <div class="parallax-card-3d carousel-card w-[340px] sm:w-[380px] flex-shrink-0 p-7" data-tilt>
+                        <div class="card-3d-content">
+                            <div class="card-3d-tag flex items-center justify-between mb-5">
+                                <span class="text-[10px] font-mono tracking-widest text-emerald-400 font-bold uppercase">03 // STEALTH SYSTEM</span>
+                                <span class="w-2 h-2 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                            </div>
+                            <h3 class="card-3d-title text-base sm:text-lg font-bold text-white mb-3 tracking-tight">Background Stealth Execution</h3>
+                            <p class="card-3d-desc text-xs text-slate-400 leading-relaxed mb-4">Uses asynchronous Windows PostMessage input routing. You can cover the Clash of Clans window, minimize it, or browse the web while RaidR continues farming.</p>
+                            <div class="card-3d-bar h-1 w-12 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
+                        </div>
+                    </div>
+
+                    <!-- Card 04 Duplicate -->
+                    <div class="parallax-card-3d carousel-card w-[340px] sm:w-[380px] flex-shrink-0 p-7" data-tilt>
+                        <div class="card-3d-content">
+                            <div class="card-3d-tag flex items-center justify-between mb-5">
+                                <span class="text-[10px] font-mono tracking-widest text-emerald-400 font-bold uppercase">04 // INTELLIGENCE</span>
+                                <span class="w-2 h-2 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                            </div>
+                            <h3 class="card-3d-title text-base sm:text-lg font-bold text-white mb-3 tracking-tight">Smart Dead-Base Filtering</h3>
+                            <p class="card-3d-desc text-xs text-slate-400 leading-relaxed mb-4">Reads OCR values for Gold, Elixir, and Dark Elixir during matchmaking. Skips active bases until high-loot dead collector bases are identified.</p>
+                            <div class="card-3d-bar h-1 w-12 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
+                        </div>
+                    </div>
+
+                    <!-- Card 05 Duplicate -->
+                    <div class="parallax-card-3d carousel-card w-[340px] sm:w-[380px] flex-shrink-0 p-7" data-tilt>
+                        <div class="card-3d-content">
+                            <div class="card-3d-tag flex items-center justify-between mb-5">
+                                <span class="text-[10px] font-mono tracking-widest text-emerald-400 font-bold uppercase">05 // COLOR ENGINE</span>
+                                <span class="w-2 h-2 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                            </div>
+                            <h3 class="card-3d-title text-base sm:text-lg font-bold text-white mb-3 tracking-tight">8 Handcrafted Themes</h3>
+                            <p class="card-3d-desc text-xs text-slate-400 leading-relaxed mb-4">Built with a complete dynamic palette system. Switch between Emerald Green, Electric Blue, Cyber Purple, Amber Gold, and more with zero restart.</p>
+                            <div class="card-3d-bar h-1 w-12 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
+                        </div>
+                    </div>
+
+                    <!-- Card 06 Duplicate -->
+                    <div class="parallax-card-3d carousel-card w-[340px] sm:w-[380px] flex-shrink-0 p-7" data-tilt>
+                        <div class="card-3d-content">
+                            <div class="card-3d-tag flex items-center justify-between mb-5">
+                                <span class="text-[10px] font-mono tracking-widest text-emerald-400 font-bold uppercase">06 // FREEDOM</span>
+                                <span class="w-2 h-2 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                            </div>
+                            <h3 class="card-3d-title text-base sm:text-lg font-bold text-white mb-3 tracking-tight">100% Free & Open Source</h3>
+                            <p class="card-3d-desc text-xs text-slate-400 leading-relaxed mb-4">No subscriptions, no hidden tokens, and no remote telemetry. Built transparently with Python, OpenCV, and Qt for Windows.</p>
+                            <div class="card-3d-bar h-1 w-12 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- -------------------------------------------------------------
+         * COMPARISON MATRIX
+         * ------------------------------------------------------------- -->
+        <section id="comparison" class="max-w-5xl mx-auto px-6 mb-28">
+            <div class="text-center mb-12">
+                <span class="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest">Architecture Breakdown</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1">RaidR vs Competitors</h2>
+            </div>
+
+            <div class="glass-panel overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="border-b border-white/10 bg-white/[0.02]">
+                                <th class="py-3.5 px-5 font-bold text-slate-400 uppercase tracking-wider">Feature</th>
+                                <th class="py-3.5 px-5 font-bold text-emerald-400 uppercase tracking-wider">RaidR (Native PC)</th>
+                                <th class="py-3.5 px-5 font-bold text-slate-400 uppercase tracking-wider">Other Bots</th>
+                                <th class="py-3.5 px-5 font-bold text-slate-400 uppercase tracking-wider">Mobile Macro Apps</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/5 font-mono">
+                            <tr>
+                                <td class="py-3 px-5 font-sans font-medium text-slate-200">Game Platform</td>
+                                <td class="py-3 px-5 text-emerald-400 font-bold">Official Google Play Games (Native x86_64)</td>
+                                <td class="py-3 px-5 text-rose-400">Third-Party Emulators (BlueStacks / Nox)</td>
+                                <td class="py-3 px-5 text-slate-400">Physical Mobile Device</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-5 font-sans font-medium text-slate-200">Account Safety</td>
+                                <td class="py-3 px-5 text-emerald-400 font-bold">Official Supercell Runtime (Safe)</td>
+                                <td class="py-3 px-5 text-rose-400">High Risk (Prohibited by Supercell TOS)</td>
+                                <td class="py-3 px-5 text-amber-400">Accessibility Service Flags</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-5 font-sans font-medium text-slate-200">Bot Client Footprint</td>
+                                <td class="py-3 px-5 text-emerald-400 font-bold">~180 MB (Lightweight Win32)</td>
+                                <td class="py-3 px-5 text-rose-400">400 MB – 1,200 MB (Heavy Frameworks)</td>
+                                <td class="py-3 px-5 text-slate-400">100 MB – 250 MB</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-5 font-sans font-medium text-slate-200">Binary Translation</td>
+                                <td class="py-3 px-5 text-emerald-400 font-bold">None (Native PC x86_64 Build)</td>
+                                <td class="py-3 px-5 text-rose-400">Heavy ARM-to-x86 Translation Overhead</td>
+                                <td class="py-3 px-5 text-slate-400">Native ARM</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-5 font-sans font-medium text-slate-200">Bot CPU Overhead</td>
+                                <td class="py-3 px-5 text-emerald-400 font-bold">&lt; 2% (Win32 Asynchronous Capture)</td>
+                                <td class="py-3 px-5 text-rose-400">20% – 35% (Continuous GDI Polling)</td>
+                                <td class="py-3 px-5 text-slate-400">Severe Battery & Thermal Drain</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-5 font-sans font-medium text-slate-200">Background Operation</td>
+                                <td class="py-3 px-5 text-emerald-400 font-bold">Yes (Minimized / Covered / Dual Monitor)</td>
+                                <td class="py-3 px-5 text-amber-400">Window Must Stay Focused & Visible</td>
+                                <td class="py-3 px-5 text-rose-400">Locks Entire Phone Screen</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-5 font-sans font-medium text-slate-200">Wall Upgrades</td>
+                                <td class="py-3 px-5 text-emerald-400 font-bold">Gold & Elixir (Both Villages)</td>
+                                <td class="py-3 px-5 text-amber-400">Gold Only / Error Prone</td>
+                                <td class="py-3 px-5 text-rose-400">Manual Taps Only</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-5 font-sans font-medium text-slate-200">Cost & Transparency</td>
+                                <td class="py-3 px-5 text-emerald-400 font-bold">100% Free & Open Source ($0)</td>
+                                <td class="py-3 px-5 text-rose-400">$10 – $25 / month (Closed Source)</td>
+                                <td class="py-3 px-5 text-rose-400">Freemium with Full-Screen Video Ads</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- -------------------------------------------------------------
+         * FAQ SECTION
+         * ------------------------------------------------------------- -->
+        <section id="faq" class="max-w-3xl mx-auto px-6 mb-28">
+            <div class="text-center mb-10">
+                <span class="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest">Common Questions</span>
+                <h2 class="text-2xl font-bold text-white mt-1">Frequently Asked Questions</h2>
+            </div>
+
+            <div class="space-y-3">
+                <div class="glass-panel p-5">
+                    <h3 class="text-sm font-bold text-white mb-1.5">How is Google Play Games PC different from BlueStacks or Nox?</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed">Google Play Games PC is Google's official desktop platform developed in direct partnership with Supercell. Unlike third-party emulators that emulate a bloated Android phone OS with heavy ARM instruction translation and bundled ad trackers, Google Play Games runs an official, native x86_64 PC build of Clash of Clans with direct DirectX 12 hardware acceleration and full Supercell TOS compliance.</p>
+                </div>
+
+                <div class="glass-panel p-5">
+                    <h3 class="text-sm font-bold text-white mb-1.5">Do I need Bluestacks or any Android emulator?</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed">No. RaidR connects directly to the official Google Play Games PC application for Windows. It requires zero emulator installation.</p>
+                </div>
+
+                <div class="glass-panel p-5">
+                    <h3 class="text-sm font-bold text-white mb-1.5">Can I use my PC for other tasks while RaidR runs?</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed">Yes. RaidR dispatches input through native Windows messages rather than taking control of your physical mouse. You can minimize or cover the game window and work freely.</p>
+                </div>
+
+                <div class="glass-panel p-5">
+                    <h3 class="text-sm font-bold text-white mb-1.5">How does the bot know whether to pay with Gold or Elixir?</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed">RaidR reads the exact button positions in the multi-select wall bar and checks the price text for redness. If one resource is depleted, it automatically switches to the affordable resource without stopping.</p>
+                </div>
+
+                <div class="glass-panel p-5">
+                    <h3 class="text-sm font-bold text-white mb-1.5">Is RaidR really 100% free?</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed">Yes. RaidR is free and open-source under the MIT license. There are no paid tiers, VIP keys, or hidden subscriptions.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- -------------------------------------------------------------
+         * DOWNLOAD CTA BANNER (FAITHFUL TO USER'S FAVORITE END SECTION)
+         * ------------------------------------------------------------- -->
+        <section id="download" class="max-w-4xl mx-auto px-6 text-center">
+            <div class="p-10 sm:p-14 relative overflow-hidden rounded-3xl border border-emerald-500/25 bg-[#0A120E] shadow-2xl shadow-emerald-950/50">
+                <div class="absolute -top-24 -left-24 w-72 h-72 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -bottom-24 -right-24 w-72 h-72 bg-teal-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                <h2 class="font-clash text-3xl sm:text-5xl text-[#D1FAE5] tracking-wide mb-4 leading-tight">
+                    Ready to Max Out Your Village?
+                </h2>
+                <p class="text-xs sm:text-sm text-slate-400 max-w-lg mx-auto mb-8 font-normal leading-relaxed">
+                    Download the latest release of RaidR today. No emulator bloat, no credit card required, runs out of the box.
+                </p>
+
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-3.5 mb-4">
+                    <a href="https://github.com/staticmooniq/RaidR/releases/latest" class="live-download-btn web-theme-accent-btn px-8 py-3.5 rounded-xl text-white font-bold text-sm shadow-xl hover:-translate-y-0.5 transition-all flex items-center space-x-2.5">
+                        <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        <span class="live-download-label">Download RaidR <span class="live-release-version">v1.2</span> (.exe)</span>
+                    </a>
+                    <a href="https://discord.gg/TWwc4W6eMq" target="_blank" rel="noopener noreferrer" class="px-6 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/30 text-slate-200 font-semibold text-sm transition-all flex items-center space-x-2">
+                        <span>Join Community Discord</span>
+                    </a>
+                </div>
+
+                <div class="text-xs text-slate-500 font-normal">
+                    Compatible with Windows 10 & 11 (64-bit)
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/[0.06] bg-[#05070A] py-10 text-xs text-slate-500">
+        <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-2.5">
+                <img src="assets/raidr_logo.png" alt="RaidR Logo" class="w-5 h-5 object-contain rounded">
+                <span class="font-bold text-slate-300">RaidR</span>
+                <span>— Open source automation assistant for PC players.</span>
+            </div>
+            <div class="flex items-center space-x-5 font-medium">
+                <a href="https://github.com/staticmooniq/RaidR" class="hover:text-emerald-400 transition-colors">GitHub</a>
+                <a href="https://discord.gg/TWwc4W6eMq" class="hover:text-emerald-400 transition-colors">Discord</a>
+                <a href="#simulator" class="hover:text-emerald-400 transition-colors">Virtual App</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Lenis Smooth Scroll Engine (macOS inertia physics) -->
+    <script src="js/lenis.min.js"></script>
+    <!-- App Logic Script -->
+    <script src="js/app.js"></script>
+</body>
+</html>

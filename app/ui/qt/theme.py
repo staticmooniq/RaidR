@@ -762,6 +762,62 @@ QScrollBar::add-line, QScrollBar::sub-line {{ height: 0; }}
 /* Toggle */
 QCheckBox#ToggleSwitch {{ spacing: 0; background: transparent; }}
 QCheckBox#ToggleSwitch::indicator {{ width: 0; height: 0; border: none; }}
+
+/* QSlider - Smooth Themed Horizontal Slider */
+QSlider {{
+    min-height: 20px;
+    max-height: 20px;
+}}
+QSlider::groove:horizontal {{
+    height: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 2px;
+}}
+QSlider::sub-page:horizontal {{
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {t['grad_mid']}, stop:1 {t['primary']});
+    border-radius: 2px;
+}}
+QSlider::sub-page:horizontal:disabled {{
+    background: rgba(255, 255, 255, 0.05);
+}}
+QSlider::handle:horizontal {{
+    background: #FFFFFF;
+    border: 2px solid {t['primary']};
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+    margin-bottom: -5px;
+    border-radius: 7px;
+}}
+QSlider::handle:horizontal:hover {{
+    background: #FFFFFF;
+    border: 2px solid {t['primary_hov']};
+}}
+QSlider::handle:horizontal:pressed {{
+    background: {t['grad_top']};
+    border: 2px solid {t['primary_pressed']};
+}}
+QSlider::handle:horizontal:disabled {{
+    background: {t['text_faint']};
+    border: 2px solid rgba(255, 255, 255, 0.08);
+}}
+
+/* Themed Slider Badge */
+QLabel#SliderBadge {{
+    color: {t['primary']};
+    background: {t['primary_dim']};
+    border: 1px solid {t['primary_dim']};
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-family: '{MONO_FONT}';
+    font-size: 11px;
+    font-weight: 700;
+}}
+QLabel#SliderBadge:disabled {{
+    color: {t['text_faint']};
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}}
 """
 
 
