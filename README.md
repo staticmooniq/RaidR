@@ -104,7 +104,7 @@ RaidR provides an autonomous session execution pipeline powered by non-intrusive
    ```
 2. Install Python dependencies:
    ```bash
-   pip install -r requirements.txt
+   pip install -r requirements-bot.txt
    ```
 3. Ensure Tesseract 5 is installed (e.g., via Chocolatey: `choco install tesseract` or from UB-Mannheim). Set `TESSERACT_CMD` environment variable if installed in a non-standard path.
 4. Launch the application:
