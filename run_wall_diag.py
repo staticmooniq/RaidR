@@ -29,6 +29,12 @@ def run_diagnostic():
     res = bot._upgrade_walls_from_build_panel(village='home')
     logger.info("Result of _upgrade_walls_from_build_panel: %s", res)
 
+    try:
+        bot._bb_deselect_wall_ui()
+        bot._bb_close_build_panel()
+    except Exception:
+        pass
+
     final_frame = bot.window.screenshot()
     if final_frame is not None:
         cv2.imwrite("debug/diag_final.png", final_frame)
