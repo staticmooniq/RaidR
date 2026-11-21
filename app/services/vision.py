@@ -13,6 +13,11 @@ from app.utils.logger import setup_logger
 
 try:
     import pytesseract
+    try:
+        from app.utils.tesseract_env import configure_tesseract
+        configure_tesseract()
+    except Exception:
+        pass
     logger = setup_logger('VisionService')
     
     @dataclass(frozen = True)
