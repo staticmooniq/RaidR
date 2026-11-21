@@ -786,153 +786,8 @@ deselect, which would eat the upcoming Attack click.'''
 
     
     def _upgrade_walls(self):
-        '''Open builder menu, scroll to Wall, add walls → remove if both red → Okay.'''
-        frame = self.window.screenshot()
-        if frame is None:
-            return None
-        self._update_config_size(frame)
-        top_roi = None  # builder portrait moved to the bottom-right in the new UI — search the whole frame
-        home_roi = VisionService.bottom_half_region(frame)
-        (hax, hay) = self.vision.find_template(frame, 'attack.png', region = home_roi)
-        if not hax:
-            logger.info('Wall upgrade: not on the home screen (Attack button missing) — skipping this pass')
-            return None
-        # New UI: no builder portrait any more — walls are behind the bottom-right Build button's
-        # "Buildings & Heroes" panel. Same flow as Builder Base, Home Village resources.
-        (nbx, nby) = self.vision.find_template(frame, 'buildbtn.png', threshold = 0.8, region = home_roi)
-        if nbx:
-            self._upgrade_walls_from_build_panel(village = 'home')
-            return None
-        (bx, by) = self._find_home_village_builder(frame, top_roi)
-        if not bx:
-            logger.info('Wall upgrade: builder portrait not found — skipping this pass')
-            return None
-        self.input.click(bx, by, pause = 0.5)
-        # TH15+ overflows the builder popup ('Suggested upgrades' grows and 'Other upgrades'
-        # continues past the fold), so the Wall row can start below the visible area. The
-        # popup scrolls with the mouse wheel without closing; touch-drags scroll too but
-        # overshoot past Wall (it now sits mid-list, not at the end). Poll the OCR at each
-        # position and wheel down a notch between misses.
-        if self.stop_event.wait(0.3):
-            return None
-        wall_pt = None
-        candidate = None
-        scrolls = 0
-        for _ in range(_WALL_MENU_SCROLL_STEPS * 2):
-            self._check_stop()
-            found = self._find_wall_row_once()
-            if found:
-                if candidate and abs(found[1] - candidate[1]) <= self.config.scale_scalar(_WALL_ROW_STABLE_TOL):
-                    wall_pt = found
-                    if scrolls:
-                        logger.info('Wall upgrade: Wall row found after %d scroll nudge(s)', scrolls)
-                    break
-                # One agreeing frame is required before clicking — the list keeps easing
-                # after a wheel nudge, and a click on stale coordinates lands on whatever
-                # row slid underneath (live repro: opened the Blacksmith's Forge).
-                candidate = found
-                if self.stop_event.wait(0.25):
-                    return None
-                continue
-            candidate = None
-            scrolls += 1
-            if scrolls >= _WALL_MENU_SCROLL_STEPS:
-                break
-            self.input.scroll(*self._wall_menu_scroll_point(), _WALL_MENU_WHEEL_CLICKS)
-            if self.stop_event.wait(0.5):
-                return None
-        if not wall_pt:
-            logger.info('Wall upgrade: Wall label OCR missed at all scroll positions — skipping this pass')
-            return None
-        self.input.click(pause = 0.6, *wall_pt)
-        # Clicking the Wall row pans the camera to a wall before the selection bar
-        # renders (often >1s) — poll for Upgrade More instead of trusting one early
-        # frame (live rate before polling: ~1 success in 8 passes).
-        (umx, umy) = (None, None)
-        frame = None
-        for _ in range(8):
-            self._check_stop()
-            frame = self.window.screenshot()
-            if frame is None:
-                return None
-            self._update_config_size(frame)
-            bot_roi = VisionService.bottom_half_region(frame)
-            (umx, umy) = self.vision.find_template(frame, 'upgrademore.png', region = bot_roi)
-            if umx:
-                break
-            if self.stop_event.wait(0.5):
-                return None
-        if not umx:
-            # The Wall click missed (wrong row / a building dialog opened instead) —
-            # close whatever came up so it cannot block the next pass or the Attack tap.
-            logger.info('Wall upgrade: upgrademore.png not visible after Wall row click — dismissing and skipping this pass')
-            if frame is not None:
-                try:
-                    import time as _time
-                    import cv2 as _cv2
-                    from app.utils.common import get_user_app_data_dir
-                    dbg = get_user_app_data_dir() / 'debug'
-                    dbg.mkdir(parents = True, exist_ok = True)
-                    path = dbg / f'''wallrow_{int(_time.time())}.jpg'''
-                    _cv2.imwrite(str(path), frame, [_cv2.IMWRITE_JPEG_QUALITY, 88])
-                    logger.info('Wall upgrade: post-click frame saved to %s', path)
-                except Exception:
-                    logger.debug('Wall upgrade: wallrow debug dump failed', exc_info = True)
-                self._dismiss_okay_or_exit_on_frame(frame)
-            return None
-        self.input.click(umx, umy, pause = 0.4)
-        # Add walls to the batch while at least one resource can still pay the total.
-        added = 0
-        for _ in range(_WALL_BATCH_MAX_ADDS):
-            self._check_stop()
-            frame = self.window.screenshot()
-            if frame is None:
-                return None
-            self._update_config_size(frame)
-            pair = VisionService.upgrade_cost_redness_by_resource_icons(frame)
-            if not pair.gold.cost_roi_xywh and not pair.elixir.cost_roi_xywh:
-                # The cost buttons are the only reliable proof the multi-upgrade popup is
-                # actually open — addwall/removewall false-positive on home-screen greens
-                # (incl. the Attack button checkmark), so never click blind.
-                logger.info('Wall upgrade: cost buttons not visible — popup not open, stopping batch')
-                break
-            if pair.gold.redness >= 0.2 and pair.elixir.redness >= 0.2:
-                break
-            # Mid-bottom only: the real Add Wall button sits in the popup's center cluster.
-            # A plain bottom-half search grabs the home Attack! button's green checkmark
-            # (bottom-left, still visible beside the popup) once +1 greys out.
-            (fh, fw) = frame.shape[:2]
-            mid_roi = (fw // 4, fh // 2, fw // 2, fh - fh // 2)
-            (awx, awy) = VisionService.find_active_addwall(frame, region = mid_roi)
-            if not awx:
-                break
-            self.input.click(awx, awy, pause = 0.3)
-            added += 1
-        if added == 0:
-            self._deselect_wall_ui()
-            return None
-        self._check_stop()
-        frame = self.window.screenshot()
-        if frame is None:
-            return None
-        self._update_config_size(frame)
-        pair = VisionService.upgrade_cost_redness_by_resource_icons(frame)
-        (fh, fw) = frame.shape[:2]
-        mid_roi = (fw // 4, fh // 2, fw // 2, fh - fh // 2)
-        if added and pair.gold.redness >= 0.2 and pair.elixir.redness >= 0.2:
-            # Last add pushed the total over both resources — take one back before confirming.
-            (rwx, rwy) = VisionService.find_active_removewall(frame, region = mid_roi)
-            if rwx:
-                self.input.click(rwx, rwy, pause = 0.4)
-        elif added > 1 and pair.elixir.redness >= 0.2 and pair.gold.redness < 0.2 and pair.gold.cost_roi_xywh:
-            # Gold will pay (elixir can't) — drop one wall so a maxed batch never drains gold
-            # to 0. Find a Match costs ~1300 gold; a zeroed gold storage blocks all attacking.
-            (rwx, rwy) = VisionService.find_active_removewall(frame, region = mid_roi)
-            if rwx:
-                logger.info('Wall upgrade: gold is the payer — removing one wall to keep the attack entry fee')
-                self.input.click(rwx, rwy, pause = 0.4)
-        logger.info('Wall upgrade: %d wall(s) added to batch', added)
-        self._upgrade_walls_pick_resource_and_okay()
+        '''Home Village wall upgrade: delegates directly to modern build-panel engine.'''
+        return self._upgrade_walls_from_build_panel(village = 'home')
 
     
     def _dismiss_okay_or_exit_on_frame(self, frame):
@@ -2427,6 +2282,7 @@ panel rows' own cost icons can never be mistaken for the Upgrade buttons).'''
             if not remove:
                 logger.warning('%s walls: Remove Wall button not found — cannot decrement', village_name)
                 break
+            logger.info('%s walls: clicking Remove Wall at (%d, %d)', village_name, remove[0], remove[1])
             self.input.click(*remove, pause = _BB_WALL_REMOVE_CLICK_SECONDS, rand = False)
             added -= 1
             (frame, prices) = self._bb_wall_read_prices(village = village)
@@ -2509,9 +2365,9 @@ stable Upgrade anchors, geometry, and button text.'''
         # Match "Add Wall" text. If multiple matches exist, pick the RIGHTMOST match (+1 Add Wall),
         # NEVER the leftmost match (+10 Add Wall)!
         region = self._bb_wall_action_region(frame, village = village)
-        matches = VisionService._find_template_matches(frame, 'addwall.png', match_threshold = _BB_WALL_ANCHOR_THRESHOLD, region = region, max_matches = 8)
+        matches = VisionService._find_template_matches(frame, 'addwall.png', _BB_WALL_ANCHOR_THRESHOLD, region = region, max_matches = 8)
         if not matches:
-            matches = VisionService._find_template_matches(frame, _BB_WALL_ADD_TEMPLATE, match_threshold = _BB_WALL_ANCHOR_THRESHOLD, region = region, max_matches = 8)
+            matches = VisionService._find_template_matches(frame, _BB_WALL_ADD_TEMPLATE, _BB_WALL_ANCHOR_THRESHOLD, region = region, max_matches = 8)
 
         if matches:
             # The rightmost match is [+1 Add Wall]!
@@ -2577,20 +2433,20 @@ In Builder Base:
                 if 0 <= rx < w and 0 <= ey < h:
                     return (rx, ey)
 
-        # 2. Secondary: Template matching (Builder Base crops or existing templates)
-        region = self._bb_wall_action_region(frame, village = village)
-        for template in (_BB_WALL_REMOVE_TEMPLATE, 'removewall.png'):
-            remove = VisionService.wall_bar_button(frame, template, match_threshold = _BB_WALL_ANCHOR_THRESHOLD, region = region)
-            if remove.found and remove.center:
-                return remove.center
-
-        # 3. Fallback relative to Add Wall button if detected
+        # 2. Secondary: Fallback relative to Add Wall button if detected
         add = self._bb_wall_add_center(frame, village = village, prices = prices)
         if add:
             step = int(round(w * 0.08125))
             rx = int(add[0] - 2.0 * step) if village == 'home' else int(add[0] - 1.0 * step)
             if 0 <= rx < w:
                 return (rx, int(add[1]))
+
+        # 3. Fallback: Template matching strictly inside wall action bar region
+        region = self._bb_wall_action_region(frame, village = village)
+        for template in (_BB_WALL_REMOVE_TEMPLATE, 'removewall.png'):
+            (rx, ry) = VisionService.find_template(frame, template, threshold = 0.70, region = region)
+            if rx is not None:
+                return (rx, ry)
 
         return None
 
@@ -2661,7 +2517,11 @@ old hammer clicks used to leave behind has no Okay at all.'''
             self.input.click(x, y, pause = 0.4, rand = False)
             if self.stop_event.wait(0.5):
                 return None
-        self.input.click(pause = 0.25, *self.config.get_point('empty'))
+        if frame is not None:
+            (h, w) = frame.shape[:2]
+            self.input.click(int(w * 0.12), int(h * 0.22), pause = 0.25, rand = False)
+        else:
+            self.input.click(pause = 0.25, *self.config.get_point('empty'))
 
     
     def _bb_close_build_panel(self):
