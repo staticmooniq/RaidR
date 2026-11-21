@@ -10,6 +10,7 @@ from app.services.input import InputService
 from app.services.vision import VisionService
 from app.config import ASPECT_16_9, Config
 from app.utils.common import get_template_path
+from app.utils.custom_strategy_store import sample_line_points
 from app.utils.logger import setup_logger
 from app.utils.profile_settings_store import EARTHQUAKE_METHOD_CURVE, EARTHQUAKE_METHOD_RANDOM
 logger = setup_logger('Strategies')
@@ -1211,6 +1212,119 @@ class CustomArmyStrategy(AttackStrategy):
                 cx = max(40, min(fw - 40, base_x + random.randint(-40, 40)))
                 cy = max(60, min(int(fh * 0.78), base_y + random.randint(-40, 40)))
                 self.input.click(cx, cy, pause = max(0.06, delay), rand = False)
+
+        elif deploy_style == 'custom_deployment':
+            custom_sets = self.strategy_data.get('custom_deployments', [])
+            valid_sets = [s for s in custom_sets if (s.get('points') or s.get('lines'))]
+            if not valid_sets:
+                logger.warning("No custom deployment sets configured; falling back to four-edge spam")
+                tap_count = count if count > 0 else 30
+                for _ in range(tap_count):
+                    if ev and ev.is_set():
+                        return True
+                    fresh, handled = self._reward_checkpoint()
+                    if handled and fresh is None:
+                        break
+                    if fresh is not None:
+                        frame = fresh
+                    px, py = self._random_four_edge_point(frame)
+                    self.input.click(px, py, pause = max(0.06, delay), rand = False)
+            else:
+                chosen = random.choice(valid_sets)
+                (fh, fw) = frame.shape[:2]
+                logger.info(
+                    "Custom Deployment: executing '%s' (out of %d sets) on resolution %dx%d",
+                    chosen.get('name', 'Custom Set'), len(valid_sets), fw, fh
+                )
+
+                battle_points: List[Tuple[int, int]] = []
+                ref_w = float(chosen.get('ref_width', 1288) or 1288)
+                ref_h = float(chosen.get('ref_height', 725) or 725)
+
+                lines_cfg = chosen.get('lines', [])
+                if lines_cfg:
+                    for line_data in lines_cfg:
+                        st = line_data.get('start', {})
+                        en = line_data.get('end', {})
+                        p1_x = st.get('nx', st.get('x', 0) / ref_w) * fw
+                        p1_y = st.get('ny', st.get('y', 0) / ref_h) * fh
+                        p2_x = en.get('nx', en.get('x', 0) / ref_w) * fw
+                        p2_y = en.get('ny', en.get('y', 0) / ref_h) * fh
+
+                        line_k = int(line_data.get('count', chosen.get('points_per_line', 8)))
+                        scale_factor = fw / ref_w if ref_w > 0 else 1.0
+                        spc = float(line_data.get('min_spacing', chosen.get('min_spacing', 40))) * scale_factor
+
+                        sampled_line = sample_line_points(
+                            (p1_x, p1_y),
+                            (p2_x, p2_y),
+                            count=line_k,
+                            min_spacing=spc,
+                            existing_points=battle_points
+                        )
+                        battle_points.extend(sampled_line)
+
+                    for p in chosen.get('points', []):
+                        if p.get('source') == 'click':
+                            px = int(round(p.get('nx', p.get('x', 0) / ref_w) * fw))
+                            py = int(round(p.get('ny', p.get('y', 0) / ref_h) * fh))
+                            battle_points.append((px, py))
+                else:
+                    for p in chosen.get('points', []):
+                        px = int(round(p.get('nx', p.get('x', 0) / ref_w) * fw))
+                        py = int(round(p.get('ny', p.get('y', 0) / ref_h) * fh))
+                        battle_points.append((px, py))
+
+                if not battle_points:
+                    logger.warning("Custom set '%s' has 0 points, using four-edge fallbacks", chosen.get('name'))
+                    battle_points = [self._random_four_edge_point(frame) for _ in range(10)]
+
+                clamped_pts = []
+                for bx, by in battle_points:
+                    c_x = max(25, min(fw - 25, int(bx)))
+                    c_y = max(45, min(int(fh * 0.88), int(by)))
+                    clamped_pts.append((c_x, c_y))
+
+                order_mode = chosen.get('order_mode', 'randomized')
+                if order_mode == 'randomized':
+                    random.shuffle(clamped_pts)
+                elif order_mode == 'reverse':
+                    clamped_pts.reverse()
+
+                delay_mode = chosen.get('delay_mode', 'random')
+                min_d = float(chosen.get('min_delay', 0.08))
+                max_d = float(chosen.get('max_delay', 0.22))
+                if min_d > max_d:
+                    min_d, max_d = max_d, min_d
+                custom_d = float(chosen.get('custom_delay', delay))
+
+                tap_count = count if count > 0 else len(clamped_pts)
+
+                for i in range(tap_count):
+                    if ev and ev.is_set():
+                        return True
+                    fresh, handled = self._reward_checkpoint()
+                    if handled and fresh is None:
+                        break
+                    if fresh is not None:
+                        frame = fresh
+
+                    pt_x, pt_y = clamped_pts[i % len(clamped_pts)]
+                    tap_x = max(20, min(fw - 20, pt_x + random.randint(-4, 4)))
+                    tap_y = max(40, min(int(fh * 0.88), pt_y + random.randint(-4, 4)))
+
+                    self.input.click_at(tap_x, tap_y, rand=False)
+
+                    if delay_mode == 'random':
+                        step_delay = random.uniform(min_d, max_d)
+                    else:
+                        step_delay = max(0.04, custom_d)
+
+                    if ev:
+                        if ev.wait(step_delay):
+                            return True
+                    else:
+                        time.sleep(step_delay)
 
         else:
             # Default 'four_edge_spam' (rapid taps distributed evenly across all 4 edges)

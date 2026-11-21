@@ -23,6 +23,7 @@ from app.utils.custom_strategy_store import (
     STRATEGY_DEPLOY_PRESETS, get_custom_troops_dir, get_default_hero_abilities
 )
 from app.ui.qt.game_cropper import GameCropWindow
+from app.ui.qt.custom_deployment_editor import CustomDeploymentDialog
 
 
 class TroopRowWidget(QWidget):
@@ -353,6 +354,8 @@ class StrategyEditorDialog(QDialog):
         if 'hero_abilities' not in self._data or not isinstance(self._data.get('hero_abilities'), dict):
             self._data['hero_abilities'] = get_default_hero_abilities()
 
+        self._custom_deployments: List[Dict[str, Any]] = list(self._data.get('custom_deployments', []))
+
         dialog_layout = QVBoxLayout(self)
         dialog_layout.setContentsMargins(SPACING['lg'], SPACING['lg'], SPACING['lg'], SPACING['lg'])
         dialog_layout.setSpacing(SPACING['md'])
@@ -450,6 +453,41 @@ class StrategyEditorDialog(QDialog):
         self._toggle_heroes.toggled.connect(self._card_heroes.setVisible)
         content_layout.addWidget(self._card_heroes)
 
+        # Custom Deployment Designer Card
+        self._card_custom_deploy = Card()
+        cd_layout = self._card_custom_deploy.card_layout
+        cd_layout.setSpacing(10)
+
+        row_cd_title = QHBoxLayout()
+        lbl_cd_title = SectionTitle('🎯 CUSTOM DEPLOYMENT PATHS (USER-DRAWN)', parent=self._card_custom_deploy)
+        row_cd_title.addWidget(lbl_cd_title)
+        row_cd_title.addStretch()
+
+        self._btn_open_designer = primary_button('📐 Open Custom Deployment Designer', parent=self._card_custom_deploy)
+        self._btn_open_designer.setFixedHeight(34)
+        self._btn_open_designer.setToolTip('Draw custom lines & points on live zoomed-out game view, configure delays and randomness')
+        self._btn_open_designer.clicked.connect(self._open_custom_deployment_designer)
+        row_cd_title.addWidget(self._btn_open_designer)
+        cd_layout.addLayout(row_cd_title)
+
+        lbl_cd_desc = QLabel(
+            "Draw lines or tap spots directly on the base. Supports up to 7 distinct deployment sets per strategy, "
+            "with randomized or custom delays, and point separation constraints. "
+            "During attack, the bot randomly chooses 1 saved set for troops using the '🎯 Custom Deployment' style.",
+            parent=self._card_custom_deploy
+        )
+        lbl_cd_desc.setWordWrap(True)
+        lbl_cd_desc.setStyleSheet(f"font-size: 11px; color: {TOKENS.get('text_muted', '#8FA0B8')};")
+        cd_layout.addWidget(lbl_cd_desc)
+
+        # Summary chip area for configured sets
+        self._deploy_summary_container = QHBoxLayout()
+        self._deploy_summary_container.setSpacing(8)
+        cd_layout.addLayout(self._deploy_summary_container)
+        self._update_custom_deploy_summary()
+
+        content_layout.addWidget(self._card_custom_deploy)
+
         # Troop List Section
         lbl_troops_sec = SectionTitle('TROOP DEPLOYMENT SEQUENCE (EXECUTED TOP TO BOTTOM)', parent=self)
         content_layout.addWidget(lbl_troops_sec)
@@ -522,6 +560,42 @@ class StrategyEditorDialog(QDialog):
         }
         self._add_troop_row(new_troop)
 
+    def _update_custom_deploy_summary(self):
+        while self._deploy_summary_container.count():
+            item = self._deploy_summary_container.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        if not self._custom_deployments:
+            lbl_empty = QLabel("No custom deployment sets configured yet. Click 'Open Custom Deployment Designer' to draw paths.")
+            lbl_empty.setStyleSheet(f"font-size: 11px; color: {TOKENS.get('text_dim', '#556987')}; font-style: italic;")
+            self._deploy_summary_container.addWidget(lbl_empty)
+            self._deploy_summary_container.addStretch()
+            return
+
+        for idx, s in enumerate(self._custom_deployments):
+            pts_cnt = len(s.get('points', []))
+            lines_cnt = len(s.get('lines', []))
+            timing = "🎲 Rand" if s.get('delay_mode') == 'random' else f"⏱️ {s.get('custom_delay', 0.15)}s"
+            order = "Shuffled" if s.get('order_mode') == 'randomized' else "Sequential"
+            badge_text = f"Set {idx + 1}: {pts_cnt} pts ({timing}, {order})"
+            btn_badge = chip_button(badge_text, parent=self._card_custom_deploy)
+            btn_badge.setToolTip(f"{s.get('name', f'Set {idx+1}')}: {lines_cnt} lines, {pts_cnt} points")
+            btn_badge.clicked.connect(self._open_custom_deployment_designer)
+            self._deploy_summary_container.addWidget(btn_badge)
+        self._deploy_summary_container.addStretch()
+
+    def _open_custom_deployment_designer(self):
+        strategy_name = self._name_field.text().strip() or "Custom Strategy"
+        dialog = CustomDeploymentDialog(
+            custom_deployments=self._custom_deployments,
+            strategy_name=strategy_name,
+            parent=self
+        )
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self._custom_deployments = dialog.get_custom_deployments()
+            self._update_custom_deploy_summary()
+
     def _on_save(self):
         name = self._name_field.text().strip()
         if not name:
@@ -536,6 +610,7 @@ class StrategyEditorDialog(QDialog):
             key: row.get_data()
             for key, row in self._hero_rows.items()
         }
+        self._data['custom_deployments'] = self._custom_deployments
         self._data['troops'] = troops_data
 
         self.accept()

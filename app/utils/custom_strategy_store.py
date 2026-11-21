@@ -1,19 +1,81 @@
 """Custom strategy data store and management."""
 from __future__ import annotations
 import json
+import math
+import random
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from app.utils.common import get_user_app_data_dir, ensure_dir
 from app.utils.logger import setup_logger
 
 logger = setup_logger('CustomStrategiesStore')
 
 STRATEGY_DEPLOY_PRESETS = [
+    ('🎯 Custom Deployment (User Drawn)', 'custom_deployment'),
     ('Diamond Perimeter (Edrag style)', 'diamond_perimeter'),
     ('Full Four-Edge Spam (Valkyrie style)', 'four_edge_spam'),
     ('Custom Deploy Zones (Fast 5-Point)', 'custom_zones'),
     ('Single Corner / Side Focus', 'corner_focus'),
 ]
+
+def sample_line_points(
+    p1: Tuple[float, float],
+    p2: Tuple[float, float],
+    count: int = 8,
+    min_spacing: float = 40.0,
+    existing_points: Optional[List[Tuple[float, float]]] = None,
+    max_attempts_per_point: int = 15
+) -> List[Tuple[float, float]]:
+    """
+    Samples points along segment p1->p2.
+    Strictly enforces:
+    1. Points are distributed along the segment.
+    2. No two sampled points are closer than min_spacing.
+    3. No sampled point is closer than min_spacing to any point in existing_points.
+    """
+    x1, y1 = p1
+    x2, y2 = p2
+    dx = x2 - x1
+    dy = y2 - y1
+    line_len = math.hypot(dx, dy)
+    if line_len < 10:
+        return []
+
+    # Maximum points that can physically fit along line_len with min_spacing
+    max_possible = max(1, int(line_len / max(10.0, min_spacing)) + 1)
+    target_k = max(2, min(int(count), max_possible))
+
+    sampled: List[Tuple[float, float]] = []
+    all_reference = list(existing_points or [])
+    step_frac = 1.0 / (target_k - 1) if target_k > 1 else 0.0
+
+    for i in range(target_k):
+        base_t = i / float(target_k - 1) if target_k > 1 else 0.5
+        for attempt in range(max_attempts_per_point):
+            if attempt == 0:
+                max_jitter = 0.20 * step_frac
+                jitter = random.uniform(-max_jitter, max_jitter)
+                t = max(0.0, min(1.0, base_t + jitter))
+            else:
+                max_jitter = (0.20 + 0.15 * attempt) * step_frac
+                jitter = random.uniform(-max_jitter, max_jitter)
+                t = max(0.0, min(1.0, base_t + jitter))
+
+            px = int(round(x1 + t * dx))
+            py = int(round(y1 + t * dy))
+
+            too_close = False
+            for ex_x, ex_y in all_reference + sampled:
+                if math.hypot(px - ex_x, py - ex_y) < min_spacing:
+                    too_close = True
+                    break
+
+            if not too_close:
+                sampled.append((px, py))
+                break
+
+    return sampled
+
 
 def get_default_hero_abilities() -> Dict[str, Dict[str, Any]]:
     return {
