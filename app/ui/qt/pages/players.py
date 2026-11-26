@@ -17,6 +17,7 @@ class _PlayerRow(QWidget):
         self._name = QLineEdit(entry.name)
         self._name.setPlaceholderText('Username (match in-game)')
         self._name.setMinimumWidth(240)
+        self._name.textEdited.connect(lambda _text: on_change())
         self._name.editingFinished.connect(on_change)
         layout.addWidget(self._name, stretch = 1)
         self._enabled = entry.enabled
@@ -95,6 +96,10 @@ class PlayersPage(QWidget):
         super().showEvent(event)
         self._reload()
 
+    def hideEvent(self, event):
+        self._save()
+        super().hideEvent(event)
+
     
     def _reload(self):
         while self._rows:
@@ -149,8 +154,7 @@ class PlayersPage(QWidget):
         new_idx = idx + delta
         if new_idx < 0 or new_idx >= len(self._rows):
             return None
-        self._rows[idx] = self._rows[new_idx]
-        self._rows[new_idx] = self._rows[idx]
+        self._rows[idx], self._rows[new_idx] = self._rows[new_idx], self._rows[idx]
         self._list_layout.removeWidget(row)
         self._list_layout.insertWidget(new_idx, row)
         self._save()

@@ -15,7 +15,8 @@ Developed as a case study in **black-box UI testing and visual telemetry** again
 - **Zero packet manipulation:** No network hooking or protocol spoofing.
 - **Pure external observation:** Operates solely via screen capture, template matching, OCR heuristics, and standard OS accessibility input messages.
 
-💬 **Community Discussions:** [https://discord.gg/TWwc4W6eMq](https://discord.gg/TWwc4W6eMq)
+💬 **Community Discussions:** [https://discord.gg/TWwc4W6eMq](https://discord.gg/TWwc4W6eMq)  
+🌐 **Project Page & Interactive Demo:** [https://raidrbot.github.io/](https://raidrbot.github.io/)
 
 <p align="center">
   <img src="docs/raidr_preview.png" alt="RaidR UI running alongside target window" width="850"/>

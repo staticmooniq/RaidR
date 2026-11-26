@@ -9,7 +9,7 @@ import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
-from app.utils.common import ensure_dir, get_user_app_data_dir
+from app.utils.common import atomic_write_text, ensure_dir, get_user_app_data_dir
 WINDOW_SELECTION_FILENAME = 'window.json'
 
 @dataclass
@@ -41,15 +41,14 @@ def load_window_selection():
             return WindowSelection()
         return WindowSelection(title = str(raw.get('title', '') or ''), top_class = str(raw.get('top_class', '') or ''), child_class = str(raw.get('child_class', '') or ''))
     except (json.JSONDecodeError, OSError):
-        return None
+        return WindowSelection()
 
 
 
 def save_window_selection(selection):
     path = get_window_selection_path()
-    path.parent.mkdir(parents = True, exist_ok = True)
     payload = asdict(selection)
-    path.write_text(json.dumps(payload, indent = 2), encoding = 'utf-8')
+    atomic_write_text(path, json.dumps(payload, indent = 2), encoding = 'utf-8')
 
 
 def clear_window_selection():

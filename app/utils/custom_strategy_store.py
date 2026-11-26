@@ -5,7 +5,7 @@ import math
 import random
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from app.utils.common import get_user_app_data_dir, ensure_dir
+from app.utils.common import atomic_write_text, get_user_app_data_dir, ensure_dir
 from app.utils.logger import setup_logger
 
 logger = setup_logger('CustomStrategiesStore')
@@ -202,8 +202,7 @@ def load_strategies() -> List[Dict[str, Any]]:
 def save_strategies(strategies: List[Dict[str, Any]]) -> None:
     try:
         path = _store_path()
-        ensure_dir(path.parent)
-        path.write_text(json.dumps(strategies, indent=2), encoding='utf-8')
+        atomic_write_text(path, json.dumps(strategies, indent=2), encoding='utf-8')
     except Exception as e:
         logger.error('Failed to save custom strategies to %s: %s', path, e)
 

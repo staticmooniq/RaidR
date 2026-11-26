@@ -73,6 +73,7 @@ class SettingsPage(QWidget):
     def __init__(self, parent = None):
         super().__init__(parent)
         self._candidates = []
+        self._loading_profile = False
         self._display = DisplayService()
         outer = QVBoxLayout(self)
         outer.setContentsMargins(SPACING['lg'], SPACING['lg'], SPACING['lg'], SPACING['lg'])
@@ -96,6 +97,8 @@ class SettingsPage(QWidget):
         layout.addStretch()
         scroll.setWidget(content)
         outer.addWidget(scroll)
+        self._reload_earthquake()
+        self._connect_profile_autosave()
 
     def _build_theme_card(self):
         card = Card()
@@ -161,11 +164,13 @@ class SettingsPage(QWidget):
     def _on_overlay_toggled(self, checked: bool):
         settings = QSettings('RaidR', 'UI')
         settings.setValue('overlay/enabled', checked)
+        settings.sync()
         self._flash_status_bar(f"Touch overlay {'enabled' if checked else 'disabled'}")
 
     def _on_theme_changed(self, theme_name: str):
         settings = QSettings('RaidR', 'UI')
         settings.setValue('theme/template', theme_name)
+        settings.sync()
         app = QApplication.instance()
         if app is not None:
             apply_theme(app, theme_name)
@@ -233,7 +238,7 @@ class SettingsPage(QWidget):
         save_row = QHBoxLayout()
         save_row.addStretch()
         save_btn = primary_button('Save settings', parent = self)
-        save_btn.clicked.connect(self._on_save)
+        save_btn.clicked.connect(lambda _checked=False: self._on_save(show_flash=True, interpret_inputs=True))
         save_row.addWidget(save_btn)
         card.card_layout.addLayout(save_row)
         return card
@@ -311,6 +316,13 @@ class SettingsPage(QWidget):
         delay_hint.setWordWrap(True)
         delay_hint.setStyleSheet(f"color: {TOKENS['text_muted']};")
         card.card_layout.addWidget(delay_hint)
+
+        loot_save_row = QHBoxLayout()
+        loot_save_row.addStretch()
+        loot_save_btn = primary_button('Save settings', parent = self)
+        loot_save_btn.clicked.connect(lambda _checked=False: self._on_save(show_flash=True, interpret_inputs=True))
+        loot_save_row.addWidget(loot_save_btn)
+        card.card_layout.addLayout(loot_save_row)
 
         return card
 
@@ -454,29 +466,73 @@ class SettingsPage(QWidget):
         super().showEvent(event)
         if hasattr(self, '_player_rows'):
             self._reload_players()
-        super().showEvent(event)
         self._reload_earthquake()
         self._refresh_windows()
 
-    def _reload_earthquake(self):
-        settings = load_profile_settings()
-        idx = self._earthquake.findText(settings.earthquake_method)
-        if idx >= 0:
-            self._earthquake.setCurrentIndex(idx)
-        self._wall_threshold.setValue(settings.wall_upgrade_threshold_m)
-        self._reserve_builders.setValue(settings.reserve_builders)
-        self._upgrade_order.setCurrentIndex(1 if settings.upgrade_order == 'cheapest' else 0)
-        self._min_gold_spin.setValue(settings.min_gold_k)
-        self._min_elixir_spin.setValue(settings.min_elixir_k)
-        self._min_dark_elixir_spin.setValue(settings.min_dark_elixir)
-        de_active = getattr(settings, 'filter_dark_elixir', False) or settings.min_dark_elixir > 0
-        self._de_toggle.setChecked(de_active)
-        self._min_dark_elixir_spin.setEnabled(de_active)
-        self._max_skips_spin.setValue(settings.max_next_skips)
-        self._battle_delay_spin.setValue(settings.battle_end_delay_s)
-        self._loot_match_combo.setCurrentIndex(1 if getattr(settings, 'loot_match_condition', 'any') == 'all' else 0)
+    def hideEvent(self, event):
+        self.flush_pending_saves()
+        super().hideEvent(event)
 
-    def _on_save(self):
+    def flush_pending_saves(self):
+        if hasattr(self, '_player_rows'):
+            self._save_players()
+        if hasattr(self, '_earthquake'):
+            self._on_save(show_flash=False, interpret_inputs=True)
+
+    def _connect_profile_autosave(self):
+        auto_save = lambda *_args: self._on_save(show_flash=False, interpret_inputs=False)
+        edit_done = lambda: self._on_save(show_flash=False, interpret_inputs=True)
+        for combo in (self._earthquake, self._upgrade_order, self._loot_match_combo):
+            combo.currentIndexChanged.connect(auto_save)
+        for spin in (
+            self._wall_threshold,
+            self._reserve_builders,
+            self._min_gold_spin,
+            self._min_elixir_spin,
+            self._min_dark_elixir_spin,
+            self._max_skips_spin,
+            self._battle_delay_spin,
+        ):
+            spin.valueChanged.connect(auto_save)
+            spin.editingFinished.connect(edit_done)
+        self._de_toggle.toggled.connect(auto_save)
+
+    def _reload_earthquake(self):
+        self._loading_profile = True
+        try:
+            settings = load_profile_settings()
+            idx = self._earthquake.findText(settings.earthquake_method)
+            if idx >= 0:
+                self._earthquake.setCurrentIndex(idx)
+            self._wall_threshold.setValue(settings.wall_upgrade_threshold_m)
+            self._reserve_builders.setValue(settings.reserve_builders)
+            self._upgrade_order.setCurrentIndex(1 if settings.upgrade_order == 'cheapest' else 0)
+            self._min_gold_spin.setValue(settings.min_gold_k)
+            self._min_elixir_spin.setValue(settings.min_elixir_k)
+            self._min_dark_elixir_spin.setValue(settings.min_dark_elixir)
+            de_active = bool(getattr(settings, 'filter_dark_elixir', False))
+            self._de_toggle.setChecked(de_active)
+            self._min_dark_elixir_spin.setEnabled(de_active)
+            self._max_skips_spin.setValue(settings.max_next_skips)
+            self._battle_delay_spin.setValue(settings.battle_end_delay_s)
+            self._loot_match_combo.setCurrentIndex(1 if getattr(settings, 'loot_match_condition', 'any') == 'all' else 0)
+        finally:
+            self._loading_profile = False
+
+    def _on_save(self, show_flash: bool = True, interpret_inputs: bool = True):
+        if getattr(self, '_loading_profile', False):
+            return
+        if interpret_inputs:
+            for spin in (
+                self._wall_threshold,
+                self._reserve_builders,
+                self._min_gold_spin,
+                self._min_elixir_spin,
+                self._min_dark_elixir_spin,
+                self._max_skips_spin,
+                self._battle_delay_spin,
+            ):
+                spin.interpretText()
         save_profile_settings(ProfileSettings(
             earthquake_method = self._earthquake.currentText(),
             wall_upgrade_threshold_m = self._wall_threshold.value(),
@@ -484,13 +540,16 @@ class SettingsPage(QWidget):
             upgrade_order = 'cheapest' if self._upgrade_order.currentIndex() == 1 else 'priciest',
             min_gold_k = self._min_gold_spin.value(),
             min_elixir_k = self._min_elixir_spin.value(),
-            min_dark_elixir = self._min_dark_elixir_spin.value() if self._de_toggle.isChecked() else 0,
+            min_dark_elixir = self._min_dark_elixir_spin.value(),
             filter_dark_elixir = self._de_toggle.isChecked(),
             max_next_skips = self._max_skips_spin.value(),
             battle_end_delay_s = self._battle_delay_spin.value(),
-            loot_match_condition = 'all' if self._loot_match_combo.currentIndex() == 1 else 'any' 
+            loot_match_condition = 'all' if self._loot_match_combo.currentIndex() == 1 else 'any'
         ))
-        self._flash_status_bar('Saved')
+        if hasattr(self, '_player_rows'):
+            self._save_players()
+        if show_flash:
+            self._flash_status_bar('Saved')
 
     def _selected_candidate(self):
         row = self._window_list.currentRow()
@@ -516,18 +575,18 @@ class SettingsPage(QWidget):
                 if not cand.is_game:
                     item.setForeground(self._muted_brush())
                 self._window_list.addItem(item)
-                if not saved.is_set():
+                if not saved or not saved.is_set():
                     continue
-                if not cand.title.strip().lower() == saved.title.strip().lower():
+                if cand.title.strip().lower() != saved.title.strip().lower():
                     continue
-                if not saved.top_class and cand.top_class == saved.top_class:
+                if saved.top_class and cand.top_class != saved.top_class:
                     continue
                 selected_row = i
             if selected_row >= 0:
                 self._window_list.setCurrentRow(selected_row)
             if not self._candidates:
                 self._window_status.setText('No visible windows found. Open the game, then Refresh.')
-            elif saved.is_set():
+            elif saved and saved.is_set():
                 self._window_status.setText(f"Pinned window: {saved.title or '(saved)'}")
             else:
                 self._window_status.setText('Using auto-detect.')

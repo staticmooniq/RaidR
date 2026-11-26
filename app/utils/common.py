@@ -90,3 +90,26 @@ def ensure_dir(path):
     '''Ensure a directory exists.'''
     path.mkdir(parents = True, exist_ok = True)
 
+
+def atomic_write_text(path: Path, content: str, encoding: str = 'utf-8') -> None:
+    '''Write text safely via temporary file + atomic replace so crashes never truncate config JSON.'''
+    import time
+    ensure_dir(path.parent)
+    tmp = path.with_name(f'.{path.name}.tmp.{os.getpid()}')
+    tmp.write_text(content, encoding=encoding)
+    for attempt in range(4):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            if attempt < 3:
+                time.sleep(0.02)
+            else:
+                try:
+                    tmp.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                path.write_text(content, encoding=encoding)
+                return
+
+

@@ -70,8 +70,11 @@ class RunPage(QWidget):
         scroll.setWidget(content)
         outer.addWidget(scroll, 1)
         outer.addWidget(self._build_controls_card())
+        self._restoring = True
         self._apply_village_ui()
         self._restore_choices()
+        self._restoring = False
+        self._connect_autosave()
         self._controller.botStarted.connect(self._on_bot_started)
         self._controller.botFinished.connect(self._on_bot_finished_ui)
         self._controller.runningChanged.connect(self._on_running_changed)
@@ -888,7 +891,43 @@ class RunPage(QWidget):
         if 1 <= minutes <= 999:
             self._minutes_spin.setValue(minutes)
 
-    def _save_choices(self):
+    def _connect_autosave(self):
+        save = lambda *_args: self._auto_save_choices(interpret_spin=False)
+        save_done = lambda *_args: self._auto_save_choices(interpret_spin=True)
+        for group in (
+            self._village_group,
+            self._bb_strategy_group,
+            self._bb_prioritise_group,
+            self._auto_upgrade_group,
+        ):
+            group.idClicked.connect(save)
+        self._strategy_combo.currentIndexChanged.connect(save)
+        self._minutes_spin.valueChanged.connect(save)
+        self._minutes_spin.editingFinished.connect(save_done)
+        self._hv_wall_slider_row._slider.valueChanged.connect(save)
+        self._bb_wall_slider_row._slider.valueChanged.connect(save)
+        for toggle in (
+            self._star_bonus,
+            self._until_maxed,
+            self._three_star_toggle,
+            self._rage_spell_toggle,
+            self._ranked,
+            self._upgrade_walls,
+            self._multi_run,
+            self._bb_upgrade_walls,
+            self._bb_two_star_toggle,
+            self._bb_return_home_failsafe,
+        ):
+            toggle.toggled.connect(save)
+
+    def _auto_save_choices(self, interpret_spin: bool = False):
+        if getattr(self, '_restoring', False):
+            return
+        self._save_choices(interpret_spin=interpret_spin)
+
+    def _save_choices(self, interpret_spin: bool = True):
+        if interpret_spin and hasattr(self, '_minutes_spin'):
+            self._minutes_spin.interpretText()
         self._settings.setValue('run/villageIndex', self._village_group.checkedId())
         self._settings.setValue('run/strategyId', self._strategy_combo.currentData())
         self._settings.setValue('run/bbStrategyIndex', self._bb_strategy_group.checkedId())
@@ -907,6 +946,7 @@ class RunPage(QWidget):
         self._settings.setValue('run/bbReturnHomeFailsafe', self._bb_return_home_failsafe.isChecked())
         self._settings.setValue('run/untilMaxed', self._until_maxed.isChecked())
         self._settings.setValue('run/minutes', self._minutes_spin.value())
+        self._settings.sync()
 
     
     def _get_minutes(self):

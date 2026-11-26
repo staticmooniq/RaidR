@@ -296,9 +296,12 @@ class MainWindow(QMainWindow):
         if self._taskbar is not None:
             self._taskbar.teardown()
         if hasattr(self, '_run_page'):
-            self._run_page._save_choices()
+            self._run_page._save_choices(interpret_spin=True)
+        if hasattr(self, '_settings_page'):
+            self._settings_page.flush_pending_saves()
         self._settings.setValue('geometry', self.saveGeometry())
         self._settings.setValue('windowState', self.saveState())
+        self._settings.sync()
         event.accept()
 
     def _setup_taskbar_thumb(self):

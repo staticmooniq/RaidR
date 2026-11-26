@@ -4,7 +4,7 @@ import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
-from app.utils.common import ensure_dir, get_user_app_data_dir
+from app.utils.common import atomic_write_text, ensure_dir, get_user_app_data_dir
 
 EARTHQUAKE_METHOD_CURVE = 'Curve Placement'
 EARTHQUAKE_METHOD_RANDOM = 'Random Placement'
@@ -144,6 +144,8 @@ def load_profile_settings():
         raw = json.loads(path.read_text(encoding = 'utf-8'))
         if not isinstance(raw, dict):
             return ProfileSettings()
+        min_de = _normalize_min_dark_elixir(raw.get('min_dark_elixir', MIN_DARK_ELIXIR_DEFAULT))
+        has_de_flag = 'filter_dark_elixir' in raw
         return ProfileSettings(
             earthquake_method = _normalize_earthquake_method(raw.get('earthquake_method')),
             wall_upgrade_threshold_m = _normalize_wall_threshold_m(raw.get('wall_upgrade_threshold_m', WALL_UPGRADE_THRESHOLD_M_DEFAULT)),
@@ -151,18 +153,17 @@ def load_profile_settings():
             upgrade_order = _normalize_upgrade_order(raw.get('upgrade_order', UPGRADE_ORDER_PRICIEST)),
             min_gold_k = _normalize_min_gold_k(raw.get('min_gold_k', MIN_GOLD_K_DEFAULT)),
             min_elixir_k = _normalize_min_elixir_k(raw.get('min_elixir_k', MIN_ELIXIR_K_DEFAULT)),
-            min_dark_elixir = _normalize_min_dark_elixir(raw.get('min_dark_elixir', MIN_DARK_ELIXIR_DEFAULT)),
+            min_dark_elixir = min_de,
             max_next_skips = _normalize_max_next_skips(raw.get('max_next_skips', MAX_NEXT_SKIPS_DEFAULT)),
             battle_end_delay_s = _normalize_battle_end_delay_s(raw.get('battle_end_delay_s', BATTLE_END_DELAY_DEFAULT)),
             loot_match_condition = _normalize_loot_match_condition(raw.get('loot_match_condition', LOOT_MATCH_ANY)),
-            filter_dark_elixir = bool(raw.get('filter_dark_elixir', False)))
+            filter_dark_elixir = bool(raw.get('filter_dark_elixir')) if has_de_flag else (min_de > 0))
     except (json.JSONDecodeError, OSError):
         return ProfileSettings()
 
 
 def save_profile_settings(settings):
     path = get_settings_path()
-    path.parent.mkdir(parents = True, exist_ok = True)
     normalized = ProfileSettings(
         earthquake_method = _normalize_earthquake_method(settings.earthquake_method),
         wall_upgrade_threshold_m = _normalize_wall_threshold_m(getattr(settings, 'wall_upgrade_threshold_m', WALL_UPGRADE_THRESHOLD_M_DEFAULT)),
@@ -176,4 +177,4 @@ def save_profile_settings(settings):
         loot_match_condition = _normalize_loot_match_condition(getattr(settings, 'loot_match_condition', LOOT_MATCH_ANY)),
         filter_dark_elixir = bool(getattr(settings, 'filter_dark_elixir', False)))
     payload = asdict(normalized)
-    path.write_text(json.dumps(payload, indent = 2), encoding = 'utf-8')
+    atomic_write_text(path, json.dumps(payload, indent = 2), encoding = 'utf-8')

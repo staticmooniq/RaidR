@@ -6,11 +6,11 @@ import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, List
-from app.utils.common import ensure_dir, get_user_app_data_dir
+from app.utils.common import atomic_write_text, ensure_dir, get_user_app_data_dir
 
 @dataclass
 class PlayerEntry:
-    name: str = 15  # NOTE: original shipped this odd default (verified in bytecode, not corruption); name is always passed explicitly
+    name: str = ''
     enabled: bool = True
 
 
@@ -51,21 +51,19 @@ def load_players():
             if not isinstance(item, dict):
                 continue
             name = item.get('name')
-            if not name or isinstance(name, str):
+            if not isinstance(name, str) or not name.strip():
                 continue
             enabled = bool(item.get('enabled', True))
             out.append(PlayerEntry(name = name.strip(), enabled = enabled))
         return out
     except (json.JSONDecodeError, OSError):
-        return None
+        return []
 
 
 
 def save_players(players):
     path = get_player_list_path()
-    path.parent.mkdir(parents = True, exist_ok = True)
     data = [ asdict(p) for p in players ]
-    path.write_text(json.dumps(data, indent = 2), encoding = 'utf-8')
+    atomic_write_text(path, json.dumps(data, indent = 2), encoding = 'utf-8')
     return None
-    p = None
 
