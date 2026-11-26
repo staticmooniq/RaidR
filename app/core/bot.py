@@ -9,6 +9,7 @@ from typing import Callable, List, Optional, Tuple
 from app.config import ASPECT_16_10, ASPECT_16_9, Config
 from app.core.strategies import AttackStrategy, EdragStrategy, TroopSpamStrategy, _EDRAG_DELAY
 from app.core.upgrader import AUTO_UPGRADE_MODES, LIVE_UPGRADE_MODES, MODE_OFF, UpgradeAdvisor
+from app.core.upgrade_menu import parse_builder_chip
 from app.core.village_state import read_hud_triplet_stable, read_village_state, read_village_state_stable
 from app.services.input import InputService
 from app.services.loot_ocr import LootOCR
@@ -107,6 +108,8 @@ class Bot:
         self._earthquake_method = EARTHQUAKE_METHOD_CURVE
         self._loot_totals = (0, 0, 0)
         self._loot_prev_resources = None
+        self._advisor = None
+        self._auto_upgrade_last_scan = 0
         self._loot_session_start_mono = 0
         self._loot_callback = None
         self._suppress_loot_negative_error_once = False
@@ -204,6 +207,8 @@ class Bot:
         '''Reset counters for a new :meth:`start` — no disk persistence.'''
         self._loot_totals = (0, 0, 0)
         self._loot_prev_resources = None
+        self._advisor = None
+        self._auto_upgrade_last_scan = 0
         self._loot_session_start_mono = time.monotonic()
         self._suppress_loot_negative_error_once = False
         self._last_hud_triplet = None
@@ -524,15 +529,37 @@ deselect, which would eat the upcoming Attack click.'''
 
     def _maybe_auto_upgrade(self, force = False):
         '''Interval-gated builder-popup scan + upgrade decision/execution (see
-        UpgradeAdvisor). ``force=True`` bypasses the interval (used when storages fill
-        up — the idle gate needs a spend attempt NOW, not in 10 minutes). A failure
-        here must never take down the farm loop. Returns the PassResult or None.'''
+        UpgradeAdvisor). ``force=True`` bypasses the interval (used at session start,
+        after wall checks, or when storages fill up). Linked to the build button to ensure
+        the village is settled and free of dialogs before opening the builder menu.'''
         mode = getattr(self, '_auto_upgrade_mode', MODE_OFF)
         if mode == MODE_OFF:
             return None
         now = time.monotonic()
-        if not force and now - getattr(self, '_auto_upgrade_last_scan', 0) < _AUTO_UPGRADE_SCAN_INTERVAL_SECONDS:
+        # Responsive interval: 120s (2m) instead of 600s
+        interval = 120.0
+        if not force and now - getattr(self, '_auto_upgrade_last_scan', 0) < interval:
             return None
+
+        # 1. Settlement Check: Ensure home village is settled and free of popups via build button
+        bx, by = self._bb_wait_for_build_button(timeout = 3.5)
+        if not bx:
+            logger.info('Auto-upgrade (%s): build button not visible — screen not settled, skipping', mode)
+            return None
+
+        # 2. Fast Builder Pre-Check: Do not open 20s popup if all builders are busy/reserved
+        frame = self.window.screenshot()
+        if frame is not None and frame.size:
+            self._update_config_size(frame)
+            chip = parse_builder_chip(frame)
+            reserve = getattr(self, '_reserve_builders', 1)
+            if chip is not None and chip[0] <= reserve and mode in (MODE_MAXER, MODE_RUSHER):
+                logger.info('Auto-upgrade (%s): all builders busy or reserved (%d/%d free, reserve=%d) — skipping popup scan',
+                            mode, chip[0], chip[1], reserve)
+                self._emit_state(note = f'builders busy ({chip[0]}/{chip[1]} free, reserve {reserve})', builders = chip)
+                self._auto_upgrade_last_scan = now
+                return None
+
         self._auto_upgrade_last_scan = now
         try:
             if getattr(self, '_advisor', None) is None:
@@ -872,11 +899,12 @@ deselect, which would eat the upcoming Attack click.'''
         # ends the session; full storages park the loop in _maybe_idle instead.
         deadline = start_time + duration_seconds if duration_seconds else None
         battle_count = 0
+        # Initial settlement check via build button
+        self._bb_wait_for_build_button(timeout = 4.0)
         if upgrade_walls:
             logger.info('Home Village: initial check for wall upgrades before battle loop')
-            self._bb_wait_for_build_button(timeout = 4.0)
             self._maybe_upgrade_walls(upgrade_walls, force = True)
-        self._maybe_auto_upgrade()
+        self._maybe_auto_upgrade(force = True)
         self._maybe_idle(deadline)
         cb = getattr(self, '_status_callback', None)
         troop_failures = 0
@@ -927,13 +955,15 @@ deselect, which would eat the upcoming Attack click.'''
             battle_count += 1
             _check_every = max(1, getattr(self, '_hv_walls_check_every', 5))
             if battle_count % _check_every == 0:
-                logger.info('Home Village: battle %d ended — looking for build button (4s) for wall upgrades (every %d battles)', battle_count, _check_every)
+                logger.info('Home Village: battle %d ended — looking for build button (4s) for wall upgrades & auto-upgrade (every %d battles)', battle_count, _check_every)
                 bx, by = self._bb_wait_for_build_button(timeout = 4.0)
                 if not bx:
                     logger.info('Home Village: build button not ready after 4s — waiting additional 4s for village to settle')
                     bx, by = self._bb_wait_for_build_button(timeout = 4.0)
                 self._maybe_upgrade_walls(upgrade_walls, force = True)
-            self._maybe_auto_upgrade()
+                self._maybe_auto_upgrade(force = True)
+            else:
+                self._maybe_auto_upgrade()
             self._maybe_idle(deadline)
             self.input.scroll(*self._scroll_point(), 5)
             if self.stop_event.wait(random.uniform(0.15, 0.25)):
@@ -3089,6 +3119,8 @@ Returns (``"return"`` | ``"chest"``, x, y) or (None, None, None) on timeout.
                 cb(err)
             raise RuntimeError(err)
         self._loot_prev_resources = None
+        self._advisor = None
+        self._auto_upgrade_last_scan = 0
 
     
     def _wake_home_and_wait_for_attack(self, timeout = 30):

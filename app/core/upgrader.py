@@ -48,7 +48,7 @@ MODE_DRY = 'dry'
 AUTO_UPGRADE_MODES = (MODE_OFF, MODE_DRY, MODE_MAXER, MODE_RUSHER)
 LIVE_UPGRADE_MODES = (MODE_MAXER, MODE_RUSHER)
 
-_BUILDER_TEMPLATES = ('builder.png', 'gbuilder.png')
+_BUILDER_TEMPLATES = ('builder.png', 'gbuilder.png', 'mbuilder.png')
 # Wheel target inside the popup body — keep in sync with bot.py _WALL_MENU_SCROLL_BASELINE.
 _SCROLL_BASELINE = {
     ASPECT_16_9: (1305, 605),
@@ -201,7 +201,7 @@ class UpgradeAdvisor:
             return False
         top_roi = VisionService.top_half_region(frame)
         for name in _BUILDER_TEMPLATES:
-            (bx, by) = self.vision.find_template(frame, name, region = top_roi)
+            (bx, by) = self.vision.find_template(frame, name, threshold = 0.68, region = top_roi)
             if bx:
                 self.input.click(bx, by, pause = 0.5)
                 if self.stop_event.wait(0.5):
@@ -210,8 +210,16 @@ class UpgradeAdvisor:
                 # top so every parse starts at the section headers.
                 self.input.scroll(*self._scroll_point(), _RESET_TO_TOP_WHEEL_CLICKS, upward = True)
                 return not self.stop_event.wait(1.0)
-        logger.info('Upgrade advisor: builder portrait not found — skipping')
-        return False
+
+        # Fallback: click the geometric center of the builder chip at top center of frame
+        (h, w) = frame.shape[:2]
+        bx, by = int(w * 0.505), int(h * 0.042)
+        logger.info('Upgrade advisor: builder portrait template not matched — clicking geometric builder chip at (%d, %d)', bx, by)
+        self.input.click(bx, by, pause = 0.5)
+        if self.stop_event.wait(0.5):
+            return False
+        self.input.scroll(*self._scroll_point(), _RESET_TO_TOP_WHEEL_CLICKS, upward = True)
+        return not self.stop_event.wait(1.0)
 
     def scan(self):
         '''From the home screen: open the builder popup, parse every scroll position,
@@ -276,18 +284,21 @@ class UpgradeAdvisor:
         return kept
 
     def _corroborate_rows(self, rows):
-        '''Cross-scan corroboration: a costed row is pickable only when the PREVIOUS
-        scan also saw it at the exact same cost. One-off OCR bargains (dropped leading
-        digits: 'XBow 350000' for a 9.5M row) never repeat a value, so they die here
-        instead of wasting an execution attempt; and a row whose resource icon misread
-        this scan adopts the previous scan's resolved resource (the dark-elixir read
-        is intermittent — this is what keeps Barbarian King pickable).'''
+        '''Cross-scan corroboration: on second+ scan, corroborates costs against the
+        previous scan. On the first scan, accepts affordable rows directly so the bot
+        does not waste the entire first pass doing nothing.'''
         prev = self._prev_scan_rows
         self._prev_scan_rows = rows
-        self._last_pass_collecting = prev is None
+        self._last_pass_collecting = False
         if prev is None:
-            logger.info('Upgrade advisor: first scan this session — collecting, no pick yet')
-            return []
+            logger.info('Upgrade advisor: first scan this session — evaluating affordable candidates directly')
+            out = []
+            for row in rows:
+                if row.cost is not None and row.cost >= _MIN_COST_VALUE and row.affordable is True:
+                    out.append(row)
+                elif row.section == SECTION_IN_PROGRESS:
+                    out.append(row)
+            return out
         out = []
         for row in rows:
             if row.cost is None:
@@ -300,7 +311,10 @@ class UpgradeAdvisor:
                     match = p
                     break
             if match is None:
-                logger.debug('Upgrade advisor: %r (%s) not corroborated by the previous scan — holding', row.label, row.cost)
+                if row.affordable is True and row.cost is not None and row.cost >= _MIN_COST_VALUE:
+                    out.append(row)
+                else:
+                    logger.debug('Upgrade advisor: %r (%s) not corroborated by the previous scan — holding', row.label, row.cost)
                 continue
             if row.resource is None and match.resource is not None:
                 row = replace(row, resource = match.resource)
