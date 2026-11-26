@@ -108,7 +108,15 @@ class ChangelogDialog(QDialog):
     def _get_changelog_html(self) -> str:
         return f"""
         <div style='font-family: sans-serif; font-size: 12px; line-height: 1.6; color: {TOKENS.get('text', '#E2E8F0')};'>
-            <h3 style='color: {TOKENS.get('primary', '#E11D48')}; margin-bottom: 4px;'>Version 1.2 (Current)</h3>
+            <h3 style='color: {TOKENS.get('primary', '#E11D48')}; margin-bottom: 4px;'>Version 1.3 (Current)</h3>
+            <ul>
+                <li><b>Persistent Multi-Account Loading:</b> Fixed multi-run player settings disappearing across restarts with atomic write-and-replace storage.</li>
+                <li><b>Hardened In-App Self-Updater:</b> Fixed PyInstaller environment inheritance to eliminate temp folder DLL load failures during in-place restart.</li>
+                <li><b>Binary Download Verification:</b> Content-Length, file size, and PE header validation to prevent broken or truncated downloads.</li>
+                <li><b>Immediate Setting Auto-Save:</b> UI controls and multi-account edits save instantaneously to disk.</li>
+            </ul>
+
+            <h3 style='color: {TOKENS.get('text_muted', '#8FA0B8')}; margin-bottom: 4px; margin-top: 14px;'>Version 1.2</h3>
             <ul>
                 <li><b>Universal Depleted Card Filter:</b> Color-divergence analysis instantly distinguishes active cards from depleted <code>x0</code> cards and knocked-out heroes, preventing post-deploy button spam.</li>
                 <li><b>Custom Hero Ability Timing:</b> Set each hero's ability trigger to Never, Random (5-12s), or custom delay in seconds.</li>

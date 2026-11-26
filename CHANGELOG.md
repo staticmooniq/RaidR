@@ -2,6 +2,16 @@
 
 All notable changes to the RaidR project are documented in this file.
 
+## [1.3] - 2026-11-26
+
+### Added & Fixed
+- **Persistent Multi-Account Loading & Config Storage:** Fixed player list and multi-run configuration disappearing across app restarts. Implemented atomic file writes (`atomic_write_text`) with `.tmp` flushing and atomic rename to guarantee integrity against application exit interrupts.
+- **Robust In-App Self-Updater:** Fixed PyInstaller child environment inheritance bug (`_MEIPASS2` / `_PYI_*`), which previously caused the replaced `.exe` to look for `python313.dll` in the dead parent process's deleted temporary folder (`Failed to load Python DLL: LoadLibrary: The specified module could not be found`).
+- **Binary Download Integrity Verification:** Added complete Content-Length validation, minimum file size checks (>50MB), and Windows PE (`MZ`) signature checks before committing in-place executable replacement.
+- **Immediate Setting Auto-Save:** Synchronized all UI inputs, checkboxes, sliders, and player table edits to instantly commit updates to `player_list.json` without requiring manual run triggers.
+
+---
+
 ## [1.2] - 2026-11-11
 
 ### Added

@@ -137,7 +137,7 @@ class UpdateDownloadThread(QThread):
                 headers={'User-Agent': 'RaidR-Updater'}
             )
             downloaded = 0
-            with urllib.request.urlopen(req, timeout=30) as resp:
+            with urllib.request.urlopen(req, timeout=45) as resp:
                 total = int(resp.headers.get('content-length', self.total_size))
                 with open(self.target_path, 'wb') as fp:
                     while True:
@@ -153,15 +153,37 @@ class UpdateDownloadThread(QThread):
                         downloaded += len(chunk)
                         self.progress.emit(downloaded, total)
 
+            # Verification: ensure file was completely downloaded and valid
+            if not os.path.exists(self.target_path):
+                raise RuntimeError("Downloaded executable file not found on disk.")
+
+            actual_size = os.path.getsize(self.target_path)
+            if total > 0 and downloaded < total:
+                raise RuntimeError(f"Download incomplete: received {downloaded} of {total} bytes.")
+            if actual_size < 10_000_000:
+                raise RuntimeError(f"Downloaded file is suspiciously small ({actual_size} bytes). Update aborted.")
+
+            # Check PE magic header (MZ)
+            with open(self.target_path, 'rb') as fp:
+                magic = fp.read(2)
+                if magic != b'MZ':
+                    raise RuntimeError("Downloaded file does not have a valid Windows executable signature.")
+
             self.finished.emit(self.target_path)
         except Exception as e:
+            if os.path.exists(self.target_path):
+                try:
+                    os.remove(self.target_path)
+                except Exception:
+                    pass
             self.error.emit(str(e))
 
 
 def launch_self_update_and_restart(downloaded_file: str) -> bool:
     """
     Schedules an in-place executable replacement and restarts into the updated version.
-    Uses PowerShell in the background to avoid any console popups or pipe hangs.
+    Uses PowerShell in the background with a sanitized environment so child processes
+    do not inherit PyInstaller temporary extraction directories (_MEIPASS2 / _PYI_*).
     """
     try:
         if getattr(sys, 'frozen', False):
@@ -179,34 +201,73 @@ def launch_self_update_and_restart(downloaded_file: str) -> bool:
         ps_target = target_exe.replace("'", "''")
 
         script_content = f"""# RaidR in-place updater
+# Strip any inherited PyInstaller bootloader environment variables immediately
+Remove-Item env:_MEIPASS* -ErrorAction SilentlyContinue
+Remove-Item env:_PYI* -ErrorAction SilentlyContinue
+Get-ChildItem env: | Where-Object {{ $_.Name -like "*MEI*" -or $_.Name -like "*PYI*" }} | ForEach-Object {{ Remove-Item "env:$($_.Name)" -ErrorAction SilentlyContinue }}
+
 $targetPid = {pid}
 $newExe = '{ps_new}'
 $targetExe = '{ps_target}'
 
-# Wait for parent PID to exit (up to 20 seconds)
+# Wait for parent PID to exit (up to 30 seconds)
 $timeout = 0
-while ((Get-Process -Id $targetPid -ErrorAction SilentlyContinue) -and ($timeout -lt 40)) {{
+while ((Get-Process -Id $targetPid -ErrorAction SilentlyContinue) -and ($timeout -lt 60)) {{
     Start-Sleep -Milliseconds 500
     $timeout++
 }}
 
-Start-Sleep -Milliseconds 800
+# Allow Windows handles and temporary PyInstaller directories to fully close & release
+Start-Sleep -Milliseconds 1500
 
-# Overwrite target executable
-try {{
-    Copy-Item -Path $newExe -Destination $targetExe -Force -ErrorAction Stop
-    Remove-Item -Path $newExe -Force -ErrorAction SilentlyContinue
-}} catch {{
-    Move-Item -Path $newExe -Destination $targetExe -Force -ErrorAction SilentlyContinue
+# Overwrite target executable with retry loop
+$replaced = $false
+for ($i = 0; $i -lt 10; $i++) {{
+    try {{
+        Copy-Item -Path $newExe -Destination $targetExe -Force -ErrorAction Stop
+        $replaced = $true
+        break
+    }} catch {{
+        Start-Sleep -Milliseconds 500
+    }}
 }}
 
-# Relaunch the updated app
-Start-Process -FilePath $targetExe -WorkingDirectory (Split-Path -Parent $targetExe) -WindowStyle Normal
+if (-not $replaced) {{
+    try {{
+        Move-Item -Path $newExe -Destination $targetExe -Force -ErrorAction Stop
+        $replaced = $true
+    }} catch {{
+        # Fallback failed
+    }}
+}}
+
+# Clean up downloaded temp file if Copy-Item was used
+if (Test-Path $newExe) {{
+    Remove-Item -Path $newExe -Force -ErrorAction SilentlyContinue
+}}
+
+# Strip environment variables again right before launching new executable
+Remove-Item env:_MEIPASS* -ErrorAction SilentlyContinue
+Remove-Item env:_PYI* -ErrorAction SilentlyContinue
+Get-ChildItem env: | Where-Object {{ $_.Name -like "*MEI*" -or $_.Name -like "*PYI*" }} | ForEach-Object {{ Remove-Item "env:$($_.Name)" -ErrorAction SilentlyContinue }}
+
+# Relaunch the updated app in clean working directory
+if (Test-Path $targetExe) {{
+    Start-Process -FilePath $targetExe -WorkingDirectory (Split-Path -Parent $targetExe) -WindowStyle Normal
+}}
+
+# Self-destruct updater script
 Remove-Item -Path $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
 """
 
         with open(ps1_path, 'w', encoding='utf-8') as f:
             f.write(script_content)
+
+        # Build clean environment without PyInstaller variables
+        clean_env = os.environ.copy()
+        for k in list(clean_env.keys()):
+            if 'MEI' in k or 'PYI' in k or k in ('_MEIPASS2', '_MEIPASS'):
+                del clean_env[k]
 
         # Launch detached hidden PowerShell script with independent process group
         CREATE_NO_WINDOW = 0x08000000
@@ -223,6 +284,7 @@ Remove-Item -Path $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyConti
                 '-File', ps1_path
             ],
             creationflags=flags,
+            env=clean_env,
             close_fds=True
         )
 

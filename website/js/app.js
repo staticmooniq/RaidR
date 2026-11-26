@@ -1067,7 +1067,7 @@ async function initLiveReleaseSync() {
         if (!res.ok) return;
 
         const data = await res.json();
-        const rawTag = data.tag_name || '1.2.0';
+        const rawTag = data.tag_name || '1.3.0';
         const displayTag = rawTag.startsWith('v') ? rawTag : `v${rawTag}`;
 
         let downloadUrl = data.html_url;
@@ -1092,7 +1092,7 @@ async function initLiveReleaseSync() {
 
         console.log(`[RaidR Live Sync] Synchronized with GitHub Release ${displayTag} -> ${downloadUrl}`);
     } catch (err) {
-        console.log('[RaidR Live Sync] Using baked v1.2 defaults', err);
+        console.log('[RaidR Live Sync] Using baked v1.3 defaults', err);
     }
 }
 

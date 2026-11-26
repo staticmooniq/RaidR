@@ -26,7 +26,7 @@
             <a href="index.html" class="flex items-center space-x-2.5 group">
                 <img src="assets/raidr_logo.png" alt="RaidR Logo" class="w-8 h-8 rounded-lg object-contain shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
                 <span class="text-xl font-bold tracking-tight"><span class="text-emerald-400">Raid</span><span class="text-white">R</span></span>
-                <span class="text-[10px] font-mono font-bold tracking-wider px-2 py-0.5 rounded border border-white/10 text-slate-400 bg-white/5">v1.2</span>
+                <span class="text-[10px] font-mono font-bold tracking-wider px-2 py-0.5 rounded border border-white/10 text-slate-400 bg-white/5">v1.3</span>
             </a>
 
             <nav class="hidden md:flex items-center space-x-7 text-xs font-semibold text-slate-300">
@@ -57,14 +57,15 @@
         <div class="space-y-6">
             <section class="glass-panel p-7">
                 <div class="flex items-center justify-between mb-3">
-                    <span class="px-2.5 py-1 rounded text-xs font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">LATEST BUILD</span>
-                    <span class="text-xs font-mono text-slate-500">Nov 2026</span>
+                    <span class="px-2.5 py-1 rounded text-xs font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">v1.3 LATEST</span>
+                    <span class="text-xs font-mono text-slate-500">2026-11-26</span>
                 </div>
-                <h2 class="text-xl font-bold text-white mb-3">Custom Deployment Designer & Persistent Auto-Save</h2>
+                <h2 class="text-xl font-bold text-white mb-3">Persistent Multi-Account Loading & Hardened Self-Updater</h2>
                 <ul class="space-y-2 text-sm text-slate-300 leading-relaxed list-disc pl-5">
-                    <li><strong>Custom Deployment Designer:</strong> Draw deployment lines or click drop points directly on zoomed-out game pixels inside Strategy Designer. Enforces minimum spacing constraints, supports random or fixed delays, randomized point order, and up to 7 selectable sets per strategy.</li>
-                    <li><strong>Reliable Settings & Multi-Account Persistence:</strong> Fixed multi-run player loading across restarts and added automatic saving with atomic JSON writes across all Run &amp; Settings controls.</li>
-                    <li><strong>Original Presets Preserved:</strong> Full Four-Edge Spam, Diamond Perimeter, Custom Deploy Zones, and Single Corner presets remain built-in and selectable.</li>
+                    <li><strong>Persistent Multi-Account Loading:</strong> Fixed multi-account configuration and player list loss across app launches. Replaced direct writes with atomic file flushing and rename, ensuring complete reliability on close and restart.</li>
+                    <li><strong>Hardened In-App Auto-Updater:</strong> Sanitized child process environment to strip inherited PyInstaller temporary variables (<code>_MEIPASS2</code>), eliminating bootloader DLL load errors when updating in-place.</li>
+                    <li><strong>Download Integrity Verification:</strong> Added real-time Content-Length validation, file size threshold checks (>50MB), and PE (<code>MZ</code>) header validation before replacing binaries.</li>
+                    <li><strong>Instant Setting Auto-Save:</strong> Any change in player lists, checkboxes, or strategy options immediately saves to disk.</li>
                 </ul>
             </section>
 
