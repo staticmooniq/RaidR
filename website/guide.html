@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RaidR Setup Guide — Google Play Games PC Configuration & Custom Deployment</title>
+    <meta name="description" content="Step-by-step setup guide for RaidR: configure Google Play Games PC 16:9 aspect ratio, draw Custom Deployment paths, enable Multi-Run account switching, and automate Gold & Elixir wall upgrades.">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+    <link rel="canonical" href="https://raidrbot.github.io/guide.html">
+    <link rel="icon" type="image/x-icon" href="assets/raidr_logo.ico">
+
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://raidrbot.github.io/guide.html">
+    <meta property="og:title" content="RaidR Setup Guide — Google Play Games PC & Strategy Designer">
+    <meta property="og:description" content="Complete setup walkthrough for native Clash of Clans PC automation using Google Play Games, Custom Deployment Designer, and background stealth mode.">
+    <meta property="og:image" content="https://raidrbot.github.io/assets/raidr_logo.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/styles.css">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "RaidR Setup Guide & Custom Deployment Walkthrough",
+      "url": "https://raidrbot.github.io/guide.html",
+      "author": {
+        "@type": "Organization",
+        "name": "RaidR"
+      }
+    }
+    </script>
+</head>
+<body class="selection:bg-emerald-500/30">
+    <div class="grid-mesh"></div>
+
+    <header class="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#080A0D]/85 border-b border-white/[0.07]">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="index.html" class="flex items-center space-x-2.5 group">
+                <img src="assets/raidr_logo.png" alt="RaidR Logo" class="w-8 h-8 rounded-lg object-contain shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+                <span class="text-xl font-bold tracking-tight"><span class="text-emerald-400">Raid</span><span class="text-white">R</span></span>
+                <span class="text-[10px] font-mono font-bold tracking-wider px-2 py-0.5 rounded border border-white/10 text-slate-400 bg-white/5">v1.2</span>
+            </a>
+
+            <nav class="hidden md:flex items-center space-x-7 text-xs font-semibold text-slate-300">
+                <a href="index.html" class="hover:text-emerald-400 transition-colors">Home</a>
+                <a href="guide.html" class="text-emerald-400 transition-colors">Setup Guide</a>
+                <a href="changelog.html" class="hover:text-emerald-400 transition-colors">Changelog</a>
+                <a href="faq.html" class="hover:text-emerald-400 transition-colors">FAQ</a>
+            </nav>
+
+            <div class="flex items-center space-x-3">
+                <a href="https://github.com/staticmooniq/RaidR" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 transition-all">
+                    <span>GitHub</span>
+                </a>
+                <a href="https://github.com/staticmooniq/RaidR/releases/latest" class="text-xs font-bold px-4 py-2 rounded-lg web-theme-accent-btn text-white transition-all">
+                    Download .exe
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="relative z-10 pt-28 pb-24 max-w-4xl mx-auto px-6">
+        <div class="mb-12">
+            <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest">Documentation</span>
+            <h1 class="font-clash text-3xl sm:text-5xl text-white mt-2 mb-4">Complete Setup & Strategy Guide</h1>
+            <p class="text-sm text-slate-400 leading-relaxed">Follow these steps to configure Google Play Games PC, build custom troop deployment paths, enable dual-resource wall upgrades, and run safely in the background.</p>
+        </div>
+
+        <div class="space-y-6">
+            <article class="glass-panel p-7">
+                <div class="text-xs font-mono text-emerald-400 font-bold mb-2">STEP 01 // REQUIREMENTS</div>
+                <h2 class="text-xl font-bold text-white mb-3">Windows & Google Play Games PC Setup</h2>
+                <ul class="space-y-2 text-sm text-slate-300 leading-relaxed list-disc pl-5">
+                    <li><strong>Supported OS:</strong> Windows 10 or Windows 11 (64-bit). No Android emulator (BlueStacks, LDPlayer, Nox) needed.</li>
+                    <li><strong>Aspect Ratio:</strong> Google Play Games should render Clash of Clans in <strong>16:9</strong> or <strong>16:10</strong>. If you use an ultrawide (21:9) monitor, open <em>RaidR &rarr; Settings &rarr; Switch display to 16:9</em>, restart Clash of Clans, then click <em>Restore my display</em>.</li>
+                    <li><strong>Bundled OCR Engine:</strong> Standalone builds from <a href="https://github.com/staticmooniq/RaidR/releases/latest" class="text-emerald-400 hover:underline">GitHub Releases</a> include Tesseract 5 bundled directly — zero extra installs required.</li>
+                </ul>
+            </article>
+
+            <article class="glass-panel p-7">
+                <div class="text-xs font-mono text-emerald-400 font-bold mb-2">STEP 02 // CUSTOM DEPLOYMENT DESIGNER</div>
+                <h2 class="text-xl font-bold text-white mb-3">Drawing Custom Attack Paths</h2>
+                <p class="text-sm text-slate-300 leading-relaxed mb-3">Open <strong>New Strategy</strong> or <strong>Edit Strategy</strong> on the Run tab and click <strong>Open Custom Deployment Designer</strong>:</p>
+                <ul class="space-y-2 text-sm text-slate-300 leading-relaxed list-disc pl-5">
+                    <li><strong>Auto Zoom-Out Capture:</strong> Automatically sends camera zoom-out to match standard battlefield view and snaps 1:1 game pixels.</li>
+                    <li><strong>Line Drawing + Spacing Guard:</strong> Draw drag lines along base edges; RaidR samples randomized points along every line while strictly enforcing a configurable minimum pixel spacing so units never bunch up too close.</li>
+                    <li><strong>Randomized Timing & Sequence:</strong> Choose random human-like intervals (or fixed delay) plus randomized tap ordering on every battle.</li>
+                    <li><strong>Up to 7 Variations per Strategy:</strong> Save up to 7 independent deployment sets; RaidR randomly selects one set per raid for anti-pattern unpredictability.</li>
+                </ul>
+            </article>
+
+            <article class="glass-panel p-7">
+                <div class="text-xs font-mono text-emerald-400 font-bold mb-2">STEP 03 // WALLS & AUTO UPGRADE</div>
+                <h2 class="text-xl font-bold text-white mb-3">Dual-Resource Wall Dump & Loot Filters</h2>
+                <ul class="space-y-2 text-sm text-slate-300 leading-relaxed list-disc pl-5">
+                    <li><strong>Reserve Builders:</strong> Set <em>Reserve builders = 1</em> in Settings to keep one builder dedicated to overflowing Gold and Elixir walls while Auto Upgrade uses remaining builders for structures.</li>
+                    <li><strong>Wall Threshold:</strong> Configure your Gold/Elixir dump threshold (e.g., 3M) and check frequency slider (every 1–15 battles) on the Run tab.</li>
+                    <li><strong>Loot Filtering:</strong> Set Minimum Gold, Minimum Elixir, optional Dark Elixir filtering, Max Next Skips, and Post-1-Star Loot Cleanup Delay under <em>Settings &rarr; Matchmaking &amp; Attack Settings</em>.</li>
+                </ul>
+            </article>
+
+            <article class="glass-panel p-7">
+                <div class="text-xs font-mono text-emerald-400 font-bold mb-2">STEP 04 // MULTI-ACCOUNT ROTATION</div>
+                <h2 class="text-xl font-bold text-white mb-3">Multi-Run Farming Across Accounts</h2>
+                <p class="text-sm text-slate-300 leading-relaxed">In <em>Settings &rarr; Multi-Run Player Rotation</em>, add your in-game Supercell ID account names in order. Toggle accounts between <strong>Run</strong> and <strong>Skip</strong>, set your per-account duration on the Run tab, and enable <strong>Multi-run</strong>. Everything auto-saves persistently across restarts.</p>
+            </article>
+        </div>
+    </main>
+
+    <footer class="border-t border-white/[0.06] bg-[#05070A] py-10 text-xs text-slate-500">
+        <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-2.5">
+                <img src="assets/raidr_logo.png" alt="RaidR Logo" class="w-5 h-5 object-contain rounded">
+                <span class="font-bold text-slate-300">RaidR</span>
+                <span>— Free open-source Windows automation suite.</span>
+            </div>
+            <div class="flex items-center space-x-5 font-medium">
+                <a href="index.html" class="hover:text-emerald-400 transition-colors">Home</a>
+                <a href="guide.html" class="hover:text-emerald-400 transition-colors">Setup Guide</a>
+                <a href="changelog.html" class="hover:text-emerald-400 transition-colors">Changelog</a>
+                <a href="faq.html" class="hover:text-emerald-400 transition-colors">FAQ</a>
+                <a href="https://github.com/staticmooniq/RaidR" class="hover:text-emerald-400 transition-colors">GitHub</a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

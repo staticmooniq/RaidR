@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RaidR Changelog — Release Notes & Latest Updates</title>
+    <meta name="description" content="Official RaidR changelog covering Custom Deployment Designer, multi-account persistence fixes, dual-resource wall upgrades, hero timing, and background Win32 input isolation.">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+    <link rel="canonical" href="https://raidrbot.github.io/changelog.html">
+    <link rel="icon" type="image/x-icon" href="assets/raidr_logo.ico">
+
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://raidrbot.github.io/changelog.html">
+    <meta property="og:title" content="RaidR Changelog — Release Notes & Updates">
+    <meta property="og:description" content="Explore release notes and technical improvements across RaidR versions for Windows Google Play Games PC.">
+    <meta property="og:image" content="https://raidrbot.github.io/assets/raidr_logo.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="selection:bg-emerald-500/30">
+    <div class="grid-mesh"></div>
+
+    <header class="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#080A0D]/85 border-b border-white/[0.07]">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="index.html" class="flex items-center space-x-2.5 group">
+                <img src="assets/raidr_logo.png" alt="RaidR Logo" class="w-8 h-8 rounded-lg object-contain shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+                <span class="text-xl font-bold tracking-tight"><span class="text-emerald-400">Raid</span><span class="text-white">R</span></span>
+                <span class="text-[10px] font-mono font-bold tracking-wider px-2 py-0.5 rounded border border-white/10 text-slate-400 bg-white/5">v1.2</span>
+            </a>
+
+            <nav class="hidden md:flex items-center space-x-7 text-xs font-semibold text-slate-300">
+                <a href="index.html" class="hover:text-emerald-400 transition-colors">Home</a>
+                <a href="guide.html" class="hover:text-emerald-400 transition-colors">Setup Guide</a>
+                <a href="changelog.html" class="text-emerald-400 transition-colors">Changelog</a>
+                <a href="faq.html" class="hover:text-emerald-400 transition-colors">FAQ</a>
+            </nav>
+
+            <div class="flex items-center space-x-3">
+                <a href="https://github.com/staticmooniq/RaidR" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 transition-all">
+                    <span>GitHub</span>
+                </a>
+                <a href="https://github.com/staticmooniq/RaidR/releases/latest" class="text-xs font-bold px-4 py-2 rounded-lg web-theme-accent-btn text-white transition-all">
+                    Download .exe
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="relative z-10 pt-28 pb-24 max-w-4xl mx-auto px-6">
+        <div class="mb-12">
+            <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest">Release History</span>
+            <h1 class="font-clash text-3xl sm:text-5xl text-white mt-2 mb-4">RaidR Changelog</h1>
+            <p class="text-sm text-slate-400 leading-relaxed">Full release notes, new automation features, and stability improvements for RaidR on Windows.</p>
+        </div>
+
+        <div class="space-y-6">
+            <section class="glass-panel p-7">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="px-2.5 py-1 rounded text-xs font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">LATEST BUILD</span>
+                    <span class="text-xs font-mono text-slate-500">Nov 2026</span>
+                </div>
+                <h2 class="text-xl font-bold text-white mb-3">Custom Deployment Designer & Persistent Auto-Save</h2>
+                <ul class="space-y-2 text-sm text-slate-300 leading-relaxed list-disc pl-5">
+                    <li><strong>Custom Deployment Designer:</strong> Draw deployment lines or click drop points directly on zoomed-out game pixels inside Strategy Designer. Enforces minimum spacing constraints, supports random or fixed delays, randomized point order, and up to 7 selectable sets per strategy.</li>
+                    <li><strong>Reliable Settings & Multi-Account Persistence:</strong> Fixed multi-run player loading across restarts and added automatic saving with atomic JSON writes across all Run &amp; Settings controls.</li>
+                    <li><strong>Original Presets Preserved:</strong> Full Four-Edge Spam, Diamond Perimeter, Custom Deploy Zones, and Single Corner presets remain built-in and selectable.</li>
+                </ul>
+            </section>
+
+            <section class="glass-panel p-7">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="px-2.5 py-1 rounded text-xs font-mono font-bold bg-white/5 text-slate-300 border border-white/10">v1.2</span>
+                    <span class="text-xs font-mono text-slate-500">2026-11-11</span>
+                </div>
+                <h2 class="text-xl font-bold text-white mb-3">Universal Depleted Filter & Dual-Resource Walls</h2>
+                <ul class="space-y-2 text-sm text-slate-300 leading-relaxed list-disc pl-5">
+                    <li><strong>Universal Depleted Card Filter:</strong> Color-divergence detection ignores exhausted <code>x0</code> troop, spell, and hero cards during deployment.</li>
+                    <li><strong>Hero Ability Timing:</strong> Per-hero timing options (<em>Random 5–12s</em>, <em>Custom seconds</em>, or <em>Never</em>) in the visual Strategy Editor.</li>
+                    <li><strong>Builder Base Improvements:</strong> Dual-resource wall upgrades (Gold + Elixir), automated Loot Cart collection, 4-second Build button detection, and clean single-tap camp deploys.</li>
+                </ul>
+            </section>
+
+            <section class="glass-panel p-7">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="px-2.5 py-1 rounded text-xs font-mono font-bold bg-white/5 text-slate-300 border border-white/10">v1.1</span>
+                    <span class="text-xs font-mono text-slate-500">2026-11-10</span>
+                </div>
+                <h2 class="text-xl font-bold text-white mb-3">Strict Background Window Isolation & Game Launcher</h2>
+                <ul class="space-y-2 text-sm text-slate-300 leading-relaxed list-disc pl-5">
+                    <li>Hardened Win32 surface input routing so browsing or multitasking never triggers cursor jumps or stray scroll events.</li>
+                    <li>Added non-stealing background capture (<code>SW_SHOWNOACTIVATE</code>) and integrated one-click <em>Launch Game</em> via Google Play Games PC.</li>
+                    <li>Introduced text-only wall action matching across Level 8+ walls and both 16:9 and 16:10 aspect ratios.</li>
+                </ul>
+            </section>
+
+            <section class="glass-panel p-7">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="px-2.5 py-1 rounded text-xs font-mono font-bold bg-white/5 text-slate-300 border border-white/10">v1.0.x</span>
+                    <span class="text-xs font-mono text-slate-500">2026-10-26 – 11-06</span>
+                </div>
+                <h2 class="text-xl font-bold text-white mb-3">Initial Research Release & Auto-Updater</h2>
+                <ul class="space-y-2 text-sm text-slate-300 leading-relaxed list-disc pl-5">
+                    <li>OCR matchmaking filters (Gold, Elixir, optional Dark Elixir), skip caps, and post-1-star cleanup timer.</li>
+                    <li>Bundled Tesseract 5 OCR engine, Windows taskbar thumbnail controls, and in-app GitHub release auto-updater.</li>
+                </ul>
+            </section>
+        </div>
+    </main>
+
+    <footer class="border-t border-white/[0.06] bg-[#05070A] py-10 text-xs text-slate-500">
+        <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-2.5">
+                <img src="assets/raidr_logo.png" alt="RaidR Logo" class="w-5 h-5 object-contain rounded">
+                <span class="font-bold text-slate-300">RaidR</span>
+                <span>— Free open-source Windows automation suite.</span>
+            </div>
+            <div class="flex items-center space-x-5 font-medium">
+                <a href="index.html" class="hover:text-emerald-400 transition-colors">Home</a>
+                <a href="guide.html" class="hover:text-emerald-400 transition-colors">Setup Guide</a>
+                <a href="changelog.html" class="hover:text-emerald-400 transition-colors">Changelog</a>
+                <a href="faq.html" class="hover:text-emerald-400 transition-colors">FAQ</a>
+                <a href="https://github.com/staticmooniq/RaidR" class="hover:text-emerald-400 transition-colors">GitHub</a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
